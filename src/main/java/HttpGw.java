@@ -9,16 +9,13 @@ public class HttpGw {
         ServerSocket server = new ServerSocket(12345);
         while (true) {
             Socket socket = server.accept();
-            InputStream is = socket.getInputStream();
-            BufferedReader br = new BufferedReader(new InputStreamReader(is));
-            String request = br.readLine();
-            String[] requestParam = request.split(" ");
-            Pattern pattern = Pattern.compile(("/(.+)"));
-            Matcher matcher = pattern.matcher(requestParam[1]);
-            String path;
-            if(matcher.find())
-                path = matcher.group(1);
-            else path = requestParam[1];
+            BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            String line;
+            StringBuilder content = new StringBuilder();
+            while (!(line = br.readLine()).equals("")) {
+                content.append(line).append('\n');
+            }
+            HTTPRequestPacket received = new HTTPRequestPacket(content.toString());
 
             /*
             File file = new File(path);
