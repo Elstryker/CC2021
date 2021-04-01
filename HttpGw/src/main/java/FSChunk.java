@@ -1,12 +1,12 @@
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.*;
-import java.util.HashMap;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FSChunk {
     // Lista de servidores disponíveis
-    HashMap<String,MyPair<InetAddress,Integer>> servers;
+    HashMap<InetAddress,Integer> servers;
     // Controlo de Concorrência
     ReentrantLock lock;
     // Aceitador de novos servidores
@@ -23,11 +23,10 @@ public class FSChunk {
                     sock.setSoTimeout(0);
                     // Aceita novo pedido
                     sock.receive(packet);
-                    MyPair<InetAddress, Integer> pair = new MyPair<>(packet.getAddress(), packet.getPort());
                     try {
                         lock.lock();
                         // Guarda o novo servidor disponivel
-                        servers.put(new String(packet.getData()), pair);
+                        servers.put(packet.getAddress(),packet.getPort());
                     } finally {
                         lock.unlock();
                     }
@@ -42,42 +41,38 @@ public class FSChunk {
         });
     }
 
+    public void start() {
+        accepter.start();
+    }
+
     /*
     Info file  :  EXISTS:true SIZE:500 | EXISTS:false
     Get file (off size)
     */
 
-    public byte[] retrieveFile(String cont) {
-        DatagramSocket socket = null;
+    public byte[] retrieveFile(String cont) throws SocketException, FileNotFoundException {
+        DatagramSocket socket;
         String metaData;
-        try {
-            // Criação Socket
-            socket = new DatagramSocket();
-        } catch (SocketException e) {
-            System.out.println(e.getMessage());
-            System.exit(1);
-        }
+        // Criação Socket
+        socket = new DatagramSocket();
         int i = 0, numServers;
         MyPair<InetAddress,Integer> dest;
         try {
             lock.lock();
-            numServers = servers.size();
-            do {
-                // Enquanto o ficheiro não existir num servidor, ou número de tentativas for ultrapassado continua a tentar encontrar.
-                String[] array = (String[]) servers.keySet().toArray();
-                dest = servers.get(array[new Random().nextInt(array.length)]);
-                metaData = getMetaData(socket, cont, dest);
-                i++;
-                System.out.println("Try "+ i + " : " + metaData);
-            } while (metaData.equals("EXISTS:false") && i < numServers * 2);
+            // Enquanto o ficheiro não existir num servidor, ou número de tentativas for ultrapassado continua a tentar encontrar.
+            List<InetAddress> list = new ArrayList<>(servers.keySet());
+            int random = new Random().nextInt(list.size());
+            dest = new MyPair<>(list.get(random),servers.get(list.get(random)));
+            metaData = getMetaData(socket, cont, dest);
         } finally {
             lock.unlock();
         }
-        if (i != numServers) {
+        if (metaData.equals("EXISTS:false"))
+            throw new FileNotFoundException("File Not Found");
+        else {
             FSChunkWorker worker = new FSChunkWorker(socket, "GET " + cont, dest);
             return worker.run();
         }
-        else return new byte[1];
     }
 
     public String getMetaData(DatagramSocket socket,String file, MyPair<InetAddress,Integer> dest) {

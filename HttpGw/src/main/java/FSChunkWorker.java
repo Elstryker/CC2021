@@ -16,6 +16,7 @@ public class FSChunkWorker {
 
     public byte[] run() {
         boolean sent = false;
+        byte[] receivedBytes = new byte[maxLength];
         try {
             // Limita-se a esperar apenas 1 segundo por chegadas de pacotes
             socket.setSoTimeout(1000);
@@ -28,13 +29,10 @@ public class FSChunkWorker {
                 // Envia pedido do pacote
                 packet = new DatagramPacket(data, data.length, destination.getFirst(), destination.getSecond());
                 socket.send(packet);
-                data = new byte[maxLength];
-                packet = new DatagramPacket(data, data.length);
                 // Receção do pacote
+                packet = new DatagramPacket(receivedBytes, receivedBytes.length);
                 socket.receive(packet);
                 sent = true;
-            } catch (SocketTimeoutException e) {
-                System.out.println(e.getMessage());
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
