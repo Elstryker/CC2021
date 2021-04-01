@@ -131,3 +131,6 @@ fabric.properties
 .idea/codestream.xml
 
 # End of https://www.toptal.com/developers/gitignore/api/intellij
+*.mp3
+src/main/resources/
+target/
