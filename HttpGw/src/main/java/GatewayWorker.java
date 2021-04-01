@@ -43,8 +43,9 @@ public class GatewayWorker implements Runnable{
                 byte[] notFoundContent = "<h1>Not found :(</h1>".getBytes();
                 sendResponse(clientSocket, "404 Not Found", "text/html", notFoundContent);
             }
-        }catch (IOException e){
-                e.printStackTrace();
+            br.close();
+        }catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
