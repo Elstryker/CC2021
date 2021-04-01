@@ -47,7 +47,7 @@ public class FSChunk {
     Get file (off size)
     */
 
-    public byte[] run(String cont) {
+    public byte[] retrieveFile(String cont) {
         DatagramSocket socket = null;
         String metaData;
         try {
@@ -69,7 +69,7 @@ public class FSChunk {
                 metaData = getMetaData(socket, cont, dest);
                 i++;
                 System.out.println("Try "+ i + " : " + metaData);
-            } while (metaData.equals("EXISTS: false") && i < numServers * 2);
+            } while (metaData.equals("EXISTS:false") && i < numServers * 2);
         } finally {
             lock.unlock();
         }
