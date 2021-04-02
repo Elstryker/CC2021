@@ -61,9 +61,24 @@ public class FSChunk {
         DatagramSocket socket;
         String metaData;
         socket = new DatagramSocket();
+        // Get Random Server to fetch files
+        MyPair<InetAddress,Integer> server = getServer();
+        // Get MetaData Information
+        metaData = getMetaData(socket, fileName, server.getFirst(), server.getSecond());
+        // Debugging metaData information
+        System.out.println("\n" + metaData + "\n\n");
+        FileMetaData fileMetaData = new FileMetaData(metaData);
+        // Get file from server if file exists, else throw exception
+        if(fileMetaData.fileExists()) {
+            byte[] fileContent = getFile(socket,fileName,server.getFirst(),server.getSecond(),fileMetaData.getSize());
+            return new MyPair<>(fileContent,fileMetaData.getType());
+        }
+        else throw new FileNotFoundException("File Not Found");
+    }
+
+    public MyPair<InetAddress,Integer> getServer() {
         InetAddress serverAddress;
         int port;
-        // Get Random Server to fetch files
         try {
             lock.lock();
             List<InetAddress> list = new ArrayList<>(servers.keySet());
@@ -73,17 +88,7 @@ public class FSChunk {
         } finally {
             lock.unlock();
         }
-        // Get MetaData Information
-        metaData = getMetaData(socket, fileName, serverAddress, port);
-        // Debugging metaData information
-        System.out.println("\n" + metaData + "\n\n");
-        FileMetaData fileMetaData = new FileMetaData(metaData);
-        // Get file from server if file exists, else throw exception
-        if(fileMetaData.fileExists()) {
-            byte[] fileContent = getFile(socket,fileName,serverAddress,port,fileMetaData.getSize());
-            return new MyPair<>(fileContent,fileMetaData.getType());
-        }
-        else throw new FileNotFoundException("File Not Found");
+        return new MyPair<>(serverAddress,port);
     }
 
     public byte[] getFile(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort, long size) {
