@@ -34,13 +34,12 @@ public class GatewayWorker implements Runnable{
            // System.out.println(accessLog);
             System.out.println(request.file);
 
-            Path filePath = getFilePath(request.path);
             try {
                 MyPair<byte[],String> receive = protocol.retrieveFile(request.file);
-                sendResponse(clientSocket, "200 OK", receive.getSecond(), receive.getFirst());
+                sendResponse(clientSocket, "200 OK", receive.getSecond(),request.file, receive.getFirst());
             } catch (FileNotFoundException e) {
                 byte[] notFoundContent = "<h1>Not found :(</h1>".getBytes();
-                sendResponse(clientSocket, "404 Not Found", "text/html", notFoundContent);
+                sendResponse(clientSocket, "404 Not Found","text/html", request.file, notFoundContent);
             }
             br.close();
         }catch (IOException e) {
@@ -55,10 +54,12 @@ public class GatewayWorker implements Runnable{
     content
     (empty line)
      */
-    private static void sendResponse(Socket client, String status, String contentType, byte[] content) throws IOException {
+    private static void sendResponse(Socket client, String status, String contentType, String contentName, byte[] content) throws IOException {
         OutputStream clientOutput =  client.getOutputStream();
         clientOutput.write(("HTTP/1.1 " + status + "\n").getBytes());
         clientOutput.write(("ContentType: " + contentType + "\n").getBytes());
+        if(!contentType.trim().equals("text/html"))
+            clientOutput.write(("Content-Disposition: attachment; filename=\"" + contentName +"\"\n").getBytes());
         clientOutput.write(("Content-Length: " + content.length + "\n").getBytes());
         clientOutput.write("\n".getBytes());
         clientOutput.write(content);
@@ -66,13 +67,5 @@ public class GatewayWorker implements Runnable{
         clientOutput.flush();
         clientOutput.close();
         client.close();
-    }
-
-    private static Path getFilePath(String path) {
-        if ("/".equals(path)) {
-            path = "index.html";
-        }
-
-        return Paths.get("src/main/resources", path);
     }
 }
