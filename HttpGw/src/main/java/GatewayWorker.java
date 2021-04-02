@@ -37,11 +37,11 @@ public class GatewayWorker implements Runnable{
                 // file exist
                 String contentType = guessContentType(filePath);
                 System.out.println("Content type: " + contentType);
-                sendResponse(clientSocket, "200 OK", contentType, Files.readAllBytes(filePath));
+                sendResponse(clientSocket, "200 OK", contentType, request.file ,Files.readAllBytes(filePath));
             } else {
                 // 404
                 byte[] notFoundContent = "<h1>Not found :(</h1>".getBytes();
-                sendResponse(clientSocket, "404 Not Found", "text/html", notFoundContent);
+                sendResponse(clientSocket, "404 Not Found","text/html", request.file, notFoundContent);
             }
             br.close();
         }catch (IOException e) {
@@ -56,10 +56,11 @@ public class GatewayWorker implements Runnable{
     content
     (empty line)
      */
-    private static void sendResponse(Socket client, String status, String contentType, byte[] content) throws IOException {
+    private static void sendResponse(Socket client, String status, String contentType, String contentName, byte[] content) throws IOException {
         OutputStream clientOutput =  client.getOutputStream();
         clientOutput.write(("HTTP/1.1 " + status + "\n").getBytes());
         clientOutput.write(("ContentType: " + contentType + "\n").getBytes());
+        clientOutput.write(("Content-Disposition: attachment; filename=\"" + contentName +"\"\n").getBytes());
         clientOutput.write(("Content-Length: " + content.length + "\n").getBytes());
         clientOutput.write("\n".getBytes());
         clientOutput.write(content);
