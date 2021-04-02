@@ -37,6 +37,8 @@ public class FSChunkWorker {
                 System.out.println(e.getMessage());
             }
         }
-        return packet.getData();
+        data = new byte[packet.getLength()];
+        System.arraycopy(packet.getData(), packet.getOffset(), data, 0, packet.getLength());
+        return data;
     }
 }

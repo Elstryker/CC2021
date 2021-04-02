@@ -1,8 +1,5 @@
 import java.io.*;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
+import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -15,16 +12,32 @@ public class FastFileSrv {
     private int clientPort;
     private DatagramPacket response;
 
-    public FastFileSrv(int port) throws SocketException {
-        socket = new DatagramSocket(4445); //  The following code creates a UDP server listening on port 17
-
+    public FastFileSrv() throws SocketException {
+        socket = new DatagramSocket(); //  The following code creates a UDP server listening on port 17
+        byte[] aut = new byte[1];
+        boolean sent = false;
+        while(!sent) {
+            try {
+                socket.setSoTimeout(1000);
+                DatagramPacket packet = new DatagramPacket(aut, aut.length, InetAddress.getByName("localhost"), 12345);
+                socket.send(packet);
+                System.out.println("Enviei Pacote autenticacao");
+                packet = new DatagramPacket(aut, aut.length);
+                System.out.println("Espero Resposta");
+                socket.receive(packet);
+                sent = true;
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+        System.out.println("Autenticado!");
+        socket.setSoTimeout(0);
     }
 
     public static void main(String[] args) throws IOException {
 
-        int port = 18;
-            FastFileSrv server = new FastFileSrv (port);
-            server.service();
+        FastFileSrv server = new FastFileSrv();
+        server.service();
 
 
     }
@@ -62,7 +75,7 @@ public class FastFileSrv {
                     size = getSize(quote);
 
                     //mens o intelIJ tem que morrer nunca reconhece paths de jeito
-                    File f = new File("src\\main\\resources\\"+ resposta);
+                    File f = new File("src/main/resources/"+ resposta);
                     //byte[] fileByteArray = getBytesArray(f);
                     byte[] fileByteArray = Files.readAllBytes(f.toPath ());
                     byte[] responder = new byte[size];
@@ -88,29 +101,22 @@ public class FastFileSrv {
                     resposta = "caiu no default";
                     break;
             }
-
-
-            byte[] buffer = resposta.getBytes();
-
-            InetAddress clientAddress = request.getAddress();
-            int clientPort = request.getPort();
-
-            DatagramPacket response = new DatagramPacket(buffer, buffer.length, clientAddress, clientPort);
-            socket.send(response);
         }
     }
 
     public static String getMetadata(String nome)  {
         String meta;
-        Path file = Path.of ("C:\\Users\\comta\\OneDrive\\Ambiente de Trabalho\\4ano\\CC\\CC2021\\FastFileSrv\\src\\main\\resources\\"+nome);
+        Path file = Path.of ("src/main/resources/"+nome);
         BasicFileAttributes attr = null;
         try {
             attr = Files.readAttributes(file, BasicFileAttributes.class);
-            Long tamanho = attr.size(); // tamanho
-            meta = "EXISTS: true "+
-                    "SIZE: "+tamanho+"\n";
+            long tamanho = attr.size(); // tamanho
+            String type = Files.probeContentType(file);
+            meta = "EXISTS:true"+
+                    ",SIZE:"+tamanho+
+                    ",TYPE:"+type+"\n";
         } catch (IOException e) {
-            meta = "EXISTS: false \n";
+            meta = "EXISTS:false \n";
         }
         return meta;
     }

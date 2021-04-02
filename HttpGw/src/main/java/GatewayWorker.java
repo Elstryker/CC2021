@@ -7,9 +7,11 @@ import java.nio.file.Paths;
 public class GatewayWorker implements Runnable{
 
     private final Socket clientSocket;
+    private FSChunk protocol;
 
-    public GatewayWorker(Socket client){
+    public GatewayWorker(Socket client, FSChunk protocol){
         this.clientSocket = client;
+        this.protocol = protocol;
     }
 
     @Override
@@ -33,13 +35,10 @@ public class GatewayWorker implements Runnable{
             System.out.println(request.file);
 
             Path filePath = getFilePath(request.path);
-            if (Files.exists(filePath)) {
-                // file exist
-                String contentType = guessContentType(filePath);
-                System.out.println("Content type: " + contentType);
-                sendResponse(clientSocket, "200 OK", contentType, Files.readAllBytes(filePath));
-            } else {
-                // 404
+            try {
+                MyPair<byte[],String> receive = protocol.retrieveFile(request.file);
+                sendResponse(clientSocket, "200 OK", receive.getSecond(), receive.getFirst());
+            } catch (FileNotFoundException e) {
                 byte[] notFoundContent = "<h1>Not found :(</h1>".getBytes();
                 sendResponse(clientSocket, "404 Not Found", "text/html", notFoundContent);
             }
@@ -67,10 +66,6 @@ public class GatewayWorker implements Runnable{
         clientOutput.flush();
         clientOutput.close();
         client.close();
-    }
-
-    private static String guessContentType(Path filePath) throws IOException {
-        return Files.probeContentType(filePath);
     }
 
     private static Path getFilePath(String path) {
