@@ -76,7 +76,7 @@ public class FSChunk {
         else throw new FileNotFoundException("File Not Found");
     }
 
-    public MyPair<InetAddress,Integer> getServer() {
+    private MyPair<InetAddress,Integer> getServer() {
         InetAddress serverAddress;
         int port;
         try {
@@ -91,12 +91,12 @@ public class FSChunk {
         return new MyPair<>(serverAddress,port);
     }
 
-    public byte[] getFile(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort, long size) {
+    private byte[] getFile(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort, long size) {
         FSChunkWorker worker = new FSChunkWorker(socket, destAddress, destPort);
         return worker.getFile(file,0,(int) size);
     }
 
-    public String getMetaData(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort) {
+    private String getMetaData(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort) {
         FSChunkWorker work = new FSChunkWorker(socket,destAddress,destPort);
         byte[] result = work.getMetaData(file);
         return new String(result);
