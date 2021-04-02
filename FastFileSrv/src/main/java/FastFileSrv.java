@@ -13,7 +13,7 @@ public class FastFileSrv {
     private DatagramPacket response;
 
     public FastFileSrv() throws SocketException {
-        socket = new DatagramSocket(); //  The following code creates a UDP server listening on port 17
+        socket = new DatagramSocket();
         byte[] aut = new byte[1];
         boolean sent = false;
         while(!sent) {
@@ -57,7 +57,7 @@ public class FastFileSrv {
 
             switch (guessPedido (quote)){
                 case 1:
-                    System.out.println("Pedido de Metadados -\n" + quote+"\n"); //string a tratar
+                    System.out.println("Pedido de Metadados -\n" + quote+"\n");
                     resposta = getMetadata (getNomeFicheiro (quote));
                     byte[] buffer = resposta.getBytes();
 
@@ -69,12 +69,11 @@ public class FastFileSrv {
                     socket.send(response);
                     break;
                 case 2:
-                    System.out.println("Pedido de Transferencia de Ficheiro -\n" + quote); //string a tratar
+                    System.out.println("Pedido de Transferencia de Ficheiro -\n" + quote);
                     resposta = getNomeFicheiro (quote);
                     offset = getOffset(quote);
                     size = getSize(quote);
 
-                    //mens o intelIJ tem que morrer nunca reconhece paths de jeito
                     File f = new File("src/main/resources/"+ resposta);
                     //byte[] fileByteArray = getBytesArray(f);
                     byte[] fileByteArray = Files.readAllBytes(f.toPath ());
@@ -110,10 +109,10 @@ public class FastFileSrv {
         BasicFileAttributes attr = null;
         try {
             attr = Files.readAttributes(file, BasicFileAttributes.class);
-            long tamanho = attr.size(); // tamanho
+            long size = attr.size();
             String type = Files.probeContentType(file);
             meta = "EXISTS:true"+
-                    ",SIZE:"+tamanho+
+                    ",SIZE:"+size+
                     ",TYPE:"+type+"\n";
         } catch (IOException e) {
             meta = "EXISTS:false \n";

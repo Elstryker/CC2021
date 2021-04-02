@@ -2,19 +2,30 @@ import java.io.IOException;
 import java.net.*;
 
 public class FSChunkWorker {
-    DatagramSocket socket;
-    DatagramPacket packet;
-    MyPair<InetAddress,Integer> destination;
-    byte[] data;
-    int maxLength = 20 * 1024;
+    private DatagramSocket socket;
+    private DatagramPacket packet;
+    private InetAddress serverAddress;
+    private int serverPort;
+    private byte[] data;
+    private int maxLength = 20 * 1024;
 
-    public FSChunkWorker(DatagramSocket sock, String message, MyPair<InetAddress,Integer> dest) {
+    public FSChunkWorker(DatagramSocket sock, InetAddress serverAddress, Integer serverPort) {
         socket = sock;
-        data = message.getBytes();
-        destination = dest;
+        this.serverAddress = serverAddress;
+        this.serverPort = serverPort;
     }
 
-    public byte[] run() {
+    public byte[] getMetaData(String file) {
+        data = ("INFO " + file).getBytes();
+        return this.getPacket();
+    }
+
+    public byte[] getFile(String file, int offset, int size) {
+        data = (String.format("GET %d %d %s",offset,size,file)).getBytes();
+        return this.getPacket();
+    }
+
+    private byte[] getPacket() {
         boolean sent = false;
         byte[] receivedBytes = new byte[maxLength];
         try {
@@ -27,7 +38,7 @@ public class FSChunkWorker {
         while(!sent) {
             try {
                 // Envia pedido do pacote
-                packet = new DatagramPacket(data, data.length, destination.getFirst(), destination.getSecond());
+                packet = new DatagramPacket(data, data.length, serverAddress, serverPort);
                 socket.send(packet);
                 // Receção do pacote
                 packet = new DatagramPacket(receivedBytes, receivedBytes.length);

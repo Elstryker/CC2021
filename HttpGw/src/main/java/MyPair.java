@@ -1,6 +1,6 @@
 public class MyPair<F,S> {
-    F first;
-    S second;
+    private final F first;
+    private final S second;
 
     public MyPair(F fir, S sec) {
         first = fir;
@@ -13,13 +13,5 @@ public class MyPair<F,S> {
 
     public F getFirst() {
         return first;
-    }
-
-    public void setSecond(S second) {
-        this.second = second;
-    }
-
-    public void setFirst(F first) {
-        this.first = first;
     }
 }

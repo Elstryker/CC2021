@@ -7,40 +7,19 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class FSChunk {
-    // Lista de servidores disponíveis
-    HashMap<InetAddress,Integer> servers;
-    // Controlo de Concorrência
-    ReentrantLock lock;
-    // Aceitador de novos servidores
-    Thread accepter;
+    // List of available servers
+    private HashMap<InetAddress,Integer> servers;
+    // Lock for thread managing
+    private ReentrantLock lock;
+    // Thread that manages connections from servers
+    private Thread accepter;
+    // Socket for accepter thread
+    private DatagramSocket accepterSocket;
 
     public FSChunk() throws SocketException {
         servers = new HashMap<>();
-        DatagramSocket sock = new DatagramSocket(12345);
-        accepter = new Thread(() -> {
-            while(true) {
-                try {
-                    byte[] content = new byte[100];
-                    DatagramPacket packet = new DatagramPacket(content, content.length);
-                    sock.setSoTimeout(0);
-                    // Aceita novo pedido
-                    sock.receive(packet);
-                    try {
-                        lock.lock();
-                        // Guarda o novo servidor disponivel
-                        servers.put(packet.getAddress(),packet.getPort());
-                    } finally {
-                        lock.unlock();
-                    }
-                    // Confirmação por linha de comando
-                    System.out.printf("Accepted server from Address: %s, from Port: %s%n\n",packet.getAddress(),packet.getPort());
-                    packet = new DatagramPacket(content, content.length, InetAddress.getByName("localhost"), packet.getPort());
-                    sock.send(packet);
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
-                }
-            }
-        });
+        accepterSocket = new DatagramSocket(12345);
+        accepter = new Thread(this::accepterWorkFlow);
         lock = new ReentrantLock();
     }
 
@@ -48,45 +27,73 @@ public class FSChunk {
         accepter.start();
     }
 
+    private void accepterWorkFlow() {
+        while(true) {
+            try {
+                byte[] content = new byte[100];
+                DatagramPacket packet = new DatagramPacket(content, content.length);
+                accepterSocket.setSoTimeout(0);
+                // Aceita novo pedido
+                accepterSocket.receive(packet);
+                try {
+                    lock.lock();
+                    // Guarda o novo servidor disponivel
+                    servers.put(packet.getAddress(),packet.getPort());
+                } finally {
+                    lock.unlock();
+                }
+                // Confirmação por linha de comando
+                System.out.printf("Accepted server from Address: %s, from Port: %s%n\n",packet.getAddress(),packet.getPort());
+                packet = new DatagramPacket(content, content.length, InetAddress.getByName("localhost"), packet.getPort());
+                accepterSocket.send(packet);
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
     /*
     Info file  :  EXISTS:true,SIZE:500,TYPE:type | EXISTS:false
-    Get off size file
+    Get offset size file
     */
 
-    public MyPair<byte[],String> retrieveFile(String cont) throws SocketException, FileNotFoundException {
+    public MyPair<byte[],String> retrieveFile(String fileName) throws SocketException, FileNotFoundException {
         DatagramSocket socket;
         String metaData;
-        // Criação Socket
         socket = new DatagramSocket();
-        MyPair<InetAddress,Integer> dest;
+        InetAddress serverAddress;
+        int port;
+        // Get Random Server to fetch files
         try {
             lock.lock();
-            // Enquanto o ficheiro não existir num servidor, ou número de tentativas for ultrapassado continua a tentar encontrar.
             List<InetAddress> list = new ArrayList<>(servers.keySet());
             int random = new Random().nextInt(list.size());
-            dest = new MyPair<>(list.get(random),servers.get(list.get(random)));
-            metaData = getMetaData(socket, cont, dest);
+            serverAddress = list.get(random);
+            port = servers.get(serverAddress);
         } finally {
             lock.unlock();
         }
+        // Get MetaData Information
+        metaData = getMetaData(socket, fileName, serverAddress, port);
+        // Debugging metaData information
         System.out.println("\n" + metaData + "\n\n");
-        Pattern pattern = Pattern.compile("EXISTS:true");
-        Matcher matcher = pattern.matcher(metaData);
-        if(matcher.find()) {
-            String[] temp = metaData.split(",");
-            long size = Long.parseLong(temp[1].split(":")[1]);
-            String type = temp[2].split(":")[1].trim();
-            FSChunkWorker worker = new FSChunkWorker(socket, "GET 0 " + size + " " + cont, dest);
-            byte[] ret = worker.run();
-            return new MyPair<>(ret,type);
+        FileMetaData fileMetaData = new FileMetaData(metaData);
+        // Get file from server if file exists, else throw exception
+        if(fileMetaData.fileExists()) {
+            byte[] fileContent = getFile(socket,fileName,serverAddress,port,fileMetaData.getSize());
+            return new MyPair<>(fileContent,fileMetaData.getType());
         }
         else throw new FileNotFoundException("File Not Found");
     }
 
-    public String getMetaData(DatagramSocket socket,String file, MyPair<InetAddress,Integer> dest) {
-        String message = "INFO " + file;
-        FSChunkWorker work = new FSChunkWorker(socket,message,dest);
-        byte[] res = work.run();
-        return new String(res,0,res.length);
+    public byte[] getFile(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort, long size) {
+        FSChunkWorker worker = new FSChunkWorker(socket, destAddress, destPort);
+        return worker.getFile(file,0,(int) size);
+    }
+
+    public String getMetaData(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort) {
+        FSChunkWorker work = new FSChunkWorker(socket,destAddress,destPort);
+        byte[] result = work.getMetaData(file);
+        return new String(result);
     }
 }
