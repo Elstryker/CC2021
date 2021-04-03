@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.*;
@@ -64,10 +65,9 @@ public class FSChunk {
         // Get Random Server to fetch files
         MyPair<InetAddress,Integer> server = getServer();
         // Get MetaData Information
-        metaData = getMetaData(socket, fileName, server.getFirst(), server.getSecond());
+        FileMetaData fileMetaData = getMetaData(socket, fileName, server.getFirst(), server.getSecond());
         // Debugging metaData information
-        System.out.println("\n" + metaData + "\n\n");
-        FileMetaData fileMetaData = new FileMetaData(metaData);
+        System.out.println("\n" + fileMetaData.toString() + "\n\n");
         // Get file from server if file exists, else throw exception
         if(fileMetaData.fileExists()) {
             byte[] fileContent = getFile(socket,fileName,server.getFirst(),server.getSecond(),fileMetaData.getSize());
@@ -81,7 +81,9 @@ public class FSChunk {
         int port;
         try {
             lock.lock();
+            // Getting keys of the Map as a list
             List<InetAddress> list = new ArrayList<>(servers.keySet());
+            // Get a random element from the list
             int random = new Random().nextInt(list.size());
             serverAddress = list.get(random);
             port = servers.get(serverAddress);
@@ -92,13 +94,24 @@ public class FSChunk {
     }
 
     private byte[] getFile(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort, long size) {
-        FSChunkWorker worker = new FSChunkWorker(socket, destAddress, destPort);
-        return worker.getFile(file,0,(int) size);
+        FSChunkWorker worker = new FSChunkWorker(socket, file, destAddress, destPort);
+        byte[] fileContent = null;
+        try {
+            fileContent = worker.getFile(0,size);
+        } catch (NoSuchFieldException e) {
+            System.out.println(e.getMessage());
+        }
+        return fileContent;
     }
 
-    private String getMetaData(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort) {
-        FSChunkWorker work = new FSChunkWorker(socket,destAddress,destPort);
-        byte[] result = work.getMetaData(file);
-        return new String(result);
+    private FileMetaData getMetaData(DatagramSocket socket, String file, InetAddress destAddress, Integer destPort) {
+        FSChunkWorker work = new FSChunkWorker(socket, file, destAddress, destPort);
+        byte[] result = null;
+        try {
+            result = work.getMetaData();
+        } catch (NoSuchFieldException e) {
+            System.out.println(e.getMessage());
+        }
+        return new FileMetaData(new String(result));
     }
 }
