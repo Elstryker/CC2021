@@ -6,7 +6,6 @@ public class FSChunkWorker {
     private InetAddress serverAddress;
     private String file;
     private int serverPort;
-    private byte[] data;
     private int maxLength = 20 * 1024;
 
     public FSChunkWorker(DatagramSocket sock, InetAddress serverAddress, Integer serverPort) {
@@ -23,33 +22,31 @@ public class FSChunkWorker {
         this.file = file;
     }
 
-    public byte[] getMetaData(String file) {
+    public FileMetaData getMetaData(String file) {
         this.file = file;
-        data = ("INFO " + this.file).getBytes();
-        return this.getPacket();
+        byte[] dataRequested = this.requestData(("INFO " + this.file).getBytes());
+        return new FileMetaData(new String(dataRequested));
     }
 
-    public byte[] getMetaData() throws NoSuchFieldException {
+    public FileMetaData getMetaData() throws NoSuchFieldException {
         if (this.file.equals(""))
             throw new NoSuchFieldException("No file especified");
-        data = ("INFO " + this.file).getBytes();
-        return this.getPacket();
+        byte[] dataRequested = this.requestData(("INFO " + this.file).getBytes());
+        return new FileMetaData(new String(dataRequested));
     }
 
     public byte[] getFile(String file, long offset, long size) {
         this.file = file;
-        data = (String.format("GET %d %d %s",offset,size,this.file)).getBytes();
-        return this.getPacket();
+        return this.requestData((String.format("GET %d %d %s",offset,size,this.file)).getBytes());
     }
 
     public byte[] getFile(long offset, long size) throws NoSuchFieldException {
         if (this.file.equals(""))
             throw new NoSuchFieldException("No file especified");
-        data = (String.format("GET %d %d %s",offset,size,this.file)).getBytes();
-        return this.getPacket();
+        return this.requestData((String.format("GET %d %d %s",offset,size,this.file)).getBytes());
     }
 
-    private byte[] getPacket() {
+    private byte[] requestData(byte[] message) {
         boolean sent = false;
         byte[] receivedBytes = new byte[maxLength];
         DatagramPacket receivePacket = null, sendPacket;
@@ -63,7 +60,7 @@ public class FSChunkWorker {
         while(!sent) {
             try {
                 // Send Packet
-                sendPacket = new DatagramPacket(data, data.length, serverAddress, serverPort);
+                sendPacket = new DatagramPacket(message, message.length, serverAddress, serverPort);
                 socket.send(sendPacket);
                 // Receive Packet
                 receivePacket = new DatagramPacket(receivedBytes, receivedBytes.length);
@@ -75,8 +72,8 @@ public class FSChunkWorker {
             }
         }
         // Get only useful info from the received buffer packet
-        data = new byte[receivePacket.getLength()];
-        System.arraycopy(receivePacket.getData(), receivePacket.getOffset(), data, 0, receivePacket.getLength());
-        return data;
+        byte[] responseData = new byte[receivePacket.getLength()];
+        System.arraycopy(receivePacket.getData(), receivePacket.getOffset(), responseData, 0, receivePacket.getLength());
+        return responseData;
     }
 }

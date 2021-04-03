@@ -106,12 +106,12 @@ public class FSChunk {
 
     private FileMetaData getMetaData(DatagramSocket socket, String file, InetAddress destAddress, Integer destPort) {
         FSChunkWorker work = new FSChunkWorker(socket, file, destAddress, destPort);
-        byte[] result = null;
+        FileMetaData metaData = null;
         try {
-            result = work.getMetaData();
+            metaData = work.getMetaData();
         } catch (NoSuchFieldException e) {
             System.out.println(e.getMessage());
         }
-        return new FileMetaData(new String(result));
+        return metaData;
     }
 }
