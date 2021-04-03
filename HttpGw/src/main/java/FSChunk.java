@@ -93,11 +93,22 @@ public class FSChunk {
         return new MyPair<>(serverAddress,port);
     }
 
-    private byte[] getFile(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort, long size) {
+    private byte[] getFile(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort, int size) {
+        int packets, offset, i, packetLength = 1024, fileContentSize = 0;
+        packets = size / packetLength;
         FSChunkWorker worker = new FSChunkWorker(socket, file, destAddress, destPort);
-        byte[] fileContent = null;
+        byte[] fileContent = new byte[size];
+        byte[] fileChunk;
         try {
-            fileContent = worker.getFile(0,size);
+            for(i = 0, offset = 0; i < packets; i++, offset += packetLength) {
+                fileChunk = worker.getFile(offset, packetLength);
+                System.arraycopy(fileChunk,0,fileContent,fileContentSize,packetLength);
+                fileContentSize += packetLength;
+            }
+            if((size % packetLength) != 0) {
+                fileChunk = worker.getFile(offset,size - offset);
+                System.arraycopy(fileChunk,0,fileContent,fileContentSize,size - offset);
+            }
         } catch (NoSuchFieldException e) {
             System.out.println(e.getMessage());
         }

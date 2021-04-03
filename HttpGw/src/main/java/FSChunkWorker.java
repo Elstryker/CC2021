@@ -6,7 +6,7 @@ public class FSChunkWorker {
     private InetAddress serverAddress;
     private String file;
     private int serverPort;
-    private int maxLength = 20 * 1024;
+    private int maxLength = 1050;
 
     public FSChunkWorker(DatagramSocket sock, InetAddress serverAddress, Integer serverPort) {
         socket = sock;
@@ -35,12 +35,12 @@ public class FSChunkWorker {
         return new FileMetaData(new String(dataRequested));
     }
 
-    public byte[] getFile(String file, long offset, long size) {
+    public byte[] getFile(String file, int offset, int size) {
         this.file = file;
         return this.requestData((String.format("GET %d %d %s",offset,size,this.file)).getBytes());
     }
 
-    public byte[] getFile(long offset, long size) throws NoSuchFieldException {
+    public byte[] getFile(int offset, int size) throws NoSuchFieldException {
         if (this.file.equals(""))
             throw new NoSuchFieldException("No file especified");
         return this.requestData((String.format("GET %d %d %s",offset,size,this.file)).getBytes());
