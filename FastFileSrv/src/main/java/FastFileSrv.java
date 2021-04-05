@@ -58,9 +58,7 @@ public class FastFileSrv {
             switch (guessPedido (quote)){
                 case 1:
                     System.out.println("Metadata Request -" + quote);
-                    String nome = getNomeFicheiro(quote);
-                    System.out.println("Nome do ficheiro: " + nome);
-                    resposta = getMetadata (nome);
+                    resposta = getMetadata (getNomeFicheiro(quote));
 
                     byte[] buffer = resposta.getBytes();
 
@@ -110,7 +108,7 @@ public class FastFileSrv {
 
     public static String getMetadata(String nome)  {
         Path filePath = Path.of ("src/main/resources/"+nome);
-        System.out.println(filePath);
+
         if(Files.exists(filePath)) {
             try {
                 BasicFileAttributes attr = Files.readAttributes(filePath, BasicFileAttributes.class);
