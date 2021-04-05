@@ -42,7 +42,7 @@ public class FSChunkWorker {
 
     public byte[] getFile(int offset, int size) throws NoSuchFieldException {
         if (this.file.equals(""))
-            throw new NoSuchFieldException("No file especified");
+            throw new NoSuchFieldException("No file specified");
         return this.requestData((String.format("GET %d %d %s",offset,size,this.file)).getBytes());
     }
 

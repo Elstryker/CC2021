@@ -57,8 +57,11 @@ public class FastFileSrv {
 
             switch (guessPedido (quote)){
                 case 1:
-                    System.out.println("Metadata Request -\n" + quote+"\n");
-                    resposta = getMetadata (getNomeFicheiro (quote));
+                    System.out.println("Metadata Request -" + quote);
+                    String nome = getNomeFicheiro(quote);
+                    System.out.println("Nome do ficheiro: " + nome);
+                    resposta = getMetadata (nome);
+
                     byte[] buffer = resposta.getBytes();
 
                     clientAddress = request.getAddress();
@@ -97,32 +100,34 @@ public class FastFileSrv {
         File f = new File("src/main/resources/"+ filename);
         byte[] responseBytes = new byte[size];
         RandomAccessFile raf = new RandomAccessFile(f, "rw");
-        //raf.seek (offset);
+
         // read from offset to offset + size
-        raf.read (responseBytes, offset, size);
+        raf.seek(offset);
+        raf.read(responseBytes, 0, size);
+        raf.close();
         return responseBytes;
     }
 
     public static String getMetadata(String nome)  {
-        String meta;
-        Path file = Path.of ("src/main/resources/"+nome);
-        BasicFileAttributes attr = null;
-        try {
-            attr = Files.readAttributes(file, BasicFileAttributes.class);
-            long size = attr.size();
-            String type = Files.probeContentType(file);
-            meta = "EXISTS:true"+
-                    ",SIZE:"+size+
-                    ",TYPE:"+type+"\n";
-        } catch (IOException e) {
-            meta = "EXISTS:false \n";
-        }
-        return meta;
+        Path filePath = Path.of ("src/main/resources/"+nome);
+        System.out.println(filePath);
+        if(Files.exists(filePath)) {
+            try {
+                BasicFileAttributes attr = Files.readAttributes(filePath, BasicFileAttributes.class);
+                long size = attr.size();
+                String type = Files.probeContentType(filePath);
+                return "EXISTS:true" +
+                        ",SIZE:" + size +
+                        ",TYPE:" + type + "\n";
+            } catch (IOException e) {
+                return "EXISTS:false \n";
+            }
+        } else return "EXISTS:false \n";
     }
 
     public static String getNomeFicheiro(String udp){
         String nome = ""; // depois a default vai ser 80 mas wharetver
-        Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*\\.(\\w|\\d)*");
+        Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*(\\.(\\w|\\d)*)?");
         Matcher matcher = pattern.matcher(udp);
         if (matcher.find())
         {   String r = matcher.group ();
