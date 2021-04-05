@@ -53,54 +53,54 @@ public class FastFileSrv {
             socket.receive(request); //The receive() method blocks until a datagram is received. And the following code sends a DatagramPacket to the client:
 
 
-            String quote = new String(recebe, 0, recebe.length); //pedido em string
+            String quote = new String(recebe, 0, recebe.length);
 
             switch (guessPedido (quote)){
                 case 1:
-                    System.out.println("Pedido de Metadados -\n" + quote+"\n");
+                    System.out.println("Metadata Request -\n" + quote+"\n");
                     resposta = getMetadata (getNomeFicheiro (quote));
                     byte[] buffer = resposta.getBytes();
 
-                    clientAddress = request.getAddress(); // get address de quem enviou o pedido
+                    clientAddress = request.getAddress();
                     clientPort = request.getPort();
 
-                    //responde ao cliente
+                    //Answers back with metadata
                     response = new DatagramPacket(buffer, buffer.length, clientAddress, clientPort);
                     socket.send(response);
                     break;
                 case 2:
-                    System.out.println("Pedido de Transferencia de Ficheiro -\n" + quote);
+                    System.out.println("GET File request -\n" + quote);
                     resposta = getNomeFicheiro (quote);
                     offset = getOffset(quote);
                     size = getSize(quote);
+                    System.out.println ("hello? :"+ resposta);
 
-                    File f = new File("src/main/resources/"+ resposta);
-                    //byte[] fileByteArray = getBytesArray(f);
-                    byte[] fileByteArray = Files.readAllBytes(f.toPath ());
-                    byte[] responder = new byte[size];
-                    //get from offset + size
-                    for(int i=offset, j = 0; j<size && i<fileByteArray.length ;i++,j++){
-                        responder[j] = fileByteArray[i];
-                    }
+                    //get only offset to offset + size bytes
+                    byte[] responder = getFile(resposta,offset,size);
 
-                    clientAddress = request.getAddress(); // get address de quem enviou o pedido
+                    clientAddress = request.getAddress();
                     clientPort = request.getPort();
-                    //responde ao cliente o nome do ficheiro a criar
+                    //send bytes requested
                     response = new DatagramPacket(responder, responder.length, clientAddress, clientPort);
                     socket.send(response);
 
-                    System.out.println ("Enviou packets");
-                    break;
-                case 0:
-                    System.out.println("Pedido de Autenticação -\n" + quote); //Noa sei se isto é preciso
-                    resposta =" por fzaer";
+                    System.out.println ("Packets sent");
                     break;
                 default:
-                    System.out.println("Pedido sem tratamento");
-                    resposta = "caiu no default";
+                    System.out.println("Unavailable request");
                     break;
             }
         }
+    }
+
+    public static byte[] getFile(String filename, int offset, int size) throws IOException {
+        File f = new File("src/main/resources/"+ filename);
+        byte[] responseBytes = new byte[size];
+        RandomAccessFile raf = new RandomAccessFile(f, "rw");
+        //raf.seek (offset);
+        // read from offset to offset + size
+        raf.read (responseBytes, offset, size);
+        return responseBytes;
     }
 
     public static String getMetadata(String nome)  {
@@ -174,12 +174,6 @@ public class FastFileSrv {
         if (matcher.find()) //pedido do tipo get de ficheiro
         {
             return 2;
-        }
-        pattern = Pattern.compile("AUTH");
-        matcher = pattern.matcher(udp);
-        if (matcher.find()) //pedido de autenticação
-        {
-            return 0;
         }
         return -1;
     }
