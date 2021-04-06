@@ -95,31 +95,7 @@ public class FSChunk {
 
     private byte[] getFile(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort, int size) {
         int offset = 0, packetLength = 1024, fileContentSize = 0;
-        int packets = size / packetLength;
-        FSChunkWorker worker = new FSChunkWorker(socket, file, destAddress, destPort);
-        byte[] fileContent = new byte[size];
-
-        try {
-            byte[] fileChunk;
-            for(int i = 0; i < packets; i++, offset += packetLength) {
-                fileChunk = worker.getFile(offset, packetLength);
-                System.arraycopy(fileChunk,0,fileContent,fileContentSize,packetLength);
-                fileContentSize += packetLength;
-            }
-            if((size % packetLength) != 0) {
-                fileChunk = worker.getFile(offset,size - offset);
-                System.arraycopy(fileChunk,0,fileContent,fileContentSize,size - offset);
-            }
-        } catch (NoSuchFieldException e) {
-            System.out.println(e.getMessage());
-        }
-        return fileContent;
-    }
-
-    private FileMetaData getMetaData(DatagramSocket socket, String file, InetAddress destAddress, Integer destPort) {
-        FSChunkWorker work = new FSChunkWorker(socket, file, destAddress, destPort);
-        FileMetaData metaData = null;
-        try {
+        int packets = size
             metaData = work.getMetaData();
         } catch (NoSuchFieldException e) {
             System.out.println(e.getMessage());
