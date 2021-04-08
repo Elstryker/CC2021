@@ -1,5 +1,6 @@
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -27,7 +28,7 @@ public class HttpGw {
 
         // Starting HTTPS Server
         new Thread(()-> {
-            ServerSocket SSLServerSocket = null;
+            SSLServerSocket SSLServerSocket = null;
             try {
                 SSLServerSocket = getSSLServerSocket();
             } catch (Exception e) {
@@ -50,7 +51,7 @@ public class HttpGw {
         }).start();
     }
 
-        private static ServerSocket getSSLServerSocket() throws Exception {
+        private static SSLServerSocket getSSLServerSocket() throws Exception {
             // set up key manager to do server authentication
             Dotenv dotenv = Dotenv.configure()
                     .directory("src/main/security")
@@ -66,6 +67,6 @@ public class HttpGw {
             kmf.init(ks, passphrase);
             ctx.init(kmf.getKeyManagers(), null, null);
 
-            return ctx.getServerSocketFactory().createServerSocket(8081);
+            return (SSLServerSocket)ctx.getServerSocketFactory().createServerSocket(8081);
         }
 }
