@@ -13,12 +13,7 @@ public class FileMetaData {
             String[] tokens = content.split(",");
             exists = Boolean.parseBoolean(tokens[0].split(":")[1]);
             size = Integer.parseInt(tokens[1].split(":")[1]);
-
-            //in case the file to be fetched has no extention
-            if(tokens[2].split(":")[1].trim().equals (""))
-                type = "raw";
-            else
-                type = tokens[2].split(":")[1].trim();
+            type = tokens[2].split(":")[1].trim();
         }
     }
 

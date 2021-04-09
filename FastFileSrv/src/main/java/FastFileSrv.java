@@ -47,13 +47,8 @@ public class FastFileSrv {
     private void service() throws IOException {
 
         while (true) {
-            byte[] recebe = new byte[1000];
-            DatagramPacket request = new DatagramPacket(recebe, recebe.length);
-            socket.receive(request); //The receive() method blocks until a datagram is received. And the following code sends a DatagramPacket to the client:
 
-
-            String quote = new String(recebe, 0, recebe.length);
-            Runnable requester = new RequestHandler (socket,quote,request);
+            Runnable requester = new RequestHandler (socket);
             /*
              * Use thread pool to allocate idle threads for processing
              * Currently connected client

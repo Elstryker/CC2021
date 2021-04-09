@@ -12,19 +12,24 @@ import java.util.regex.Pattern;
 
 class RequestHandler implements Runnable{
     private DatagramSocket socket;
-    private String quote ;
+    private String command ;
     private InetAddress clientAddress;
     private int clientPort;
     private DatagramPacket response;
     private DatagramPacket request;
+    private MessageData message;
     /**
      * Create according to the Socket of the given client
      * Thread body
      * @param socket
      */
-    public RequestHandler(DatagramSocket socket,String quote,DatagramPacket request){
+    public RequestHandler(DatagramSocket socket) throws IOException {
+        byte[] recebe = new byte[1000];
+        DatagramPacket request = new DatagramPacket(recebe, recebe.length);
+        socket.receive(request); //The receive() method blocks until a datagram is received. And the following code sends a DatagramPacket to the client:
+        this.command = new String(recebe, 0, recebe.length);
+        this.message = new MessageData (command);
         this.socket = socket;
-        this.quote = quote;
         this.request = request;
     }
 
@@ -34,10 +39,10 @@ class RequestHandler implements Runnable{
             String resposta;
             int offset;
             int size;
-            switch (guessPedido (quote)){
+            switch (message.guessPedido ()){
                 case 1:
-                    System.out.println("Metadata Request -" + quote);
-                    resposta = getMetadata (getNomeFicheiro(quote));
+                    System.out.println("Metadata Request -" + command);
+                    resposta = message.getMetadata ();
 
                     byte[] buffer = resposta.getBytes();
 
@@ -49,17 +54,10 @@ class RequestHandler implements Runnable{
                     socket.send(response);
                     break;
                 case 2:
-                    System.out.println("GET File request -\n" + quote);
-                    resposta = getNomeFicheiro (quote);
-                    if(!(resposta.contains ("."))){ //if nome doesn't have extention
-                        resposta = filelistCheck (resposta);
-                    }
-                    offset = getOffset(quote);
-                    size = getSize(quote);
-                    System.out.println ("hello? "+ resposta);
+                    System.out.println("GET File request -\n" + command);
 
                     //get only offset to offset + size bytes
-                    byte[] responder = getFile(resposta,offset,size);
+                    byte[] responder = message.getFile();
 
                     clientAddress = request.getAddress();
                     clientPort = request.getPort();
@@ -80,141 +78,6 @@ class RequestHandler implements Runnable{
 
         }
 
-    }
-    public static byte[] getFile(String filename, int offset, int size) throws IOException {
-        // check for missing extention in file name
-        if(!(filename.contains ("."))){ //if nome doesn't have extention
-            filename = filelistCheck (filename);
-        }
-        System.out.println ("nome do ficheiro a pegar: "+filename);
-        File f = new File("src/main/resources/"+ filename);
-        byte[] responseBytes = new byte[size];
-        RandomAccessFile raf = new RandomAccessFile(f, "rw");
-
-        // read from offset to offset + size
-        raf.seek(offset);
-        raf.read(responseBytes, 0, size);
-        raf.close();
-        return responseBytes;
-    }
-
-    public static String getMetadata(String nome)  {
-
-        //this may happen when there was .. ou ../ in the requested file name
-        if(nome.equals ("")) return "EXISTS:false \n";
-
-        // check for missing extention in file name
-        if(!(nome.contains ("."))){ //if nome doesn't have extention
-            nome = filelistCheck (nome);
-        }
-        if(nome.equals ("")) return "EXISTS:false \n";
-        System.out.println ("nome do ficheiro dos metadados: "+nome);
-        Path filePath = Path.of ("src/main/resources/"+nome);
-
-        if(Files.exists(filePath)) {
-            try {
-                BasicFileAttributes attr = Files.readAttributes(filePath, BasicFileAttributes.class);
-                long size = attr.size();
-                String type = Files.probeContentType(filePath);
-                return "EXISTS:true" +
-                        ",SIZE:" + size +
-                        ",TYPE:" + type + "\n";
-            } catch (IOException e) {
-                return "EXISTS:false \n";
-            }
-        } else return "EXISTS:false \n";
-    }
-
-    public static String getNomeFicheiro(String udp){
-        //Regex looks for pattern that must be invalid when looking for file ../ or ..
-        Pattern protecter = Pattern.compile ("(\\.\\.\\/ | \\.\\.)");
-        Matcher protect = protecter.matcher (udp);
-        if(protect.find ()) {
-            System.out.println ("DEBUG: Found invalid file name\n!");
-            return "";
-        }
-        String nome = "";
-        Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*(\\.(\\w|\\d)*)?");
-        Matcher matcher = pattern.matcher(udp);
-        if (matcher.find())
-        {   String r = matcher.group ();
-            String[] parts = r.split(" ");
-            try {
-                nome = parts[3];
-            } catch(ArrayIndexOutOfBoundsException a) {
-                nome = parts[1];
-            }
-        }
-        return nome;
-    }
-
-    public static int getOffset(String udp){
-        int nome =0; // depois a default vai ser 80 mas wharetver
-        Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*(\\.(\\w|\\d)*)?");
-        Matcher matcher = pattern.matcher(udp);
-        if (matcher.find())
-        {
-            String r = matcher.group ();
-            String[] parts = r.split(" ");
-            nome = Integer.parseInt (parts[1]);
-        }
-        return nome;
-    }
-
-    public static int getSize(String udp){
-        int nome = 0; // depois a default vai ser 80 mas wharetver
-        Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*(\\.(\\w|\\d)*)?");
-        Matcher matcher = pattern.matcher(udp);
-        if (matcher.find())
-        {
-            String r = matcher.group ();
-            String[] parts = r.split(" ");
-            nome = Integer.parseInt (parts[2]);
-        }
-        return nome;
-    }
-
-    private int guessPedido(String udp){
-        Pattern pattern = Pattern.compile("INFO");
-        Matcher matcher = pattern.matcher(udp);
-        if (matcher.find()) //pedido do tipo get de Metadados
-        {
-            return 1;
-        }
-        pattern = Pattern.compile("GET");
-        matcher = pattern.matcher(udp);
-        if (matcher.find()) //pedido do tipo get de ficheiro
-        {
-            return 2;
-        }
-        return -1;
-    }
-
-    public static String filelistCheck(String fname)
-    {   System.out.println ("nome do file no check files: "+fname);
-        String filenameFinal = "";
-        int counterFiles = 0;
-        File folder = new File("src/main/resources/");
-        File[] listOfFiles = folder.listFiles();
-
-        for (File file : listOfFiles)
-        {
-            if (file.isFile())
-            {
-                System.out.println (file.getName ());
-                if(!(file.getName ().equals (".gitkeep")) && !(file.getName ().equals (".gitignore"))) {
-                    String[] filename = file.getName ().split ("\\."); //split filename from it's extension
-                    if (filename[0].equals (fname)) { //matching defined filename
-                        counterFiles++;
-                        filenameFinal = filename[0] + "." + filename[1];
-                    }
-                }
-
-            }
-        }
-        if(counterFiles > 1)
-            return ""; //means there was found more than one file with "fname" so it's returned nothing
-        return filenameFinal;
     }
 
 }
