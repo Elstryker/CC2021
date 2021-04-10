@@ -15,9 +15,9 @@ class RequestHandler implements Runnable{
     private String command ;
     private InetAddress clientAddress;
     private int clientPort;
+    private MessageData message;
     private DatagramPacket response;
     private DatagramPacket request;
-    private MessageData message;
     /**
      * Create according to the Socket of the given client
      * Thread body
@@ -27,9 +27,9 @@ class RequestHandler implements Runnable{
         byte[] recebe = new byte[1000];
         DatagramPacket request = new DatagramPacket(recebe, recebe.length);
         socket.receive(request); //The receive() method blocks until a datagram is received. And the following code sends a DatagramPacket to the client:
-        this.command = new String(recebe, 0, recebe.length);
-        this.message = new MessageData (command);
         this.socket = socket;
+        this.command = new String(recebe, 0, recebe.length);;
+        this.message = new MessageData (command);
         this.request = request;
     }
 
@@ -37,8 +37,6 @@ class RequestHandler implements Runnable{
 
         try{
             String resposta;
-            int offset;
-            int size;
             switch (message.guessPedido ()){
                 case 1:
                     System.out.println("Metadata Request -" + command);

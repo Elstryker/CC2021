@@ -8,20 +8,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MessageData {
-    public static String command;
-    public static int offset;
-    public static int size;
-    public static String fileName;
+    private String command;
+    private int offset;
+    private int size;
+    private String fileName;
 
     public MessageData(String command){
-        MessageData.command = command; // to be used to get offset and size
+        this.command = command; // to be used to get offset and size
         fileName = getNomeFicheiro (); //filename with or withou extention
 
         if(!(fileName.contains ("."))){ //if nome doesn't have extention
             fileName = filelistCheck (fileName); //get fileName with extention;
         }
     }
-    public static byte[] getFile() throws IOException {
+    public synchronized byte[] getFile() throws IOException {
         getOffset ();
         getSize ();
         System.out.println ("nome do ficheiro a pegar: "+fileName);
@@ -36,7 +36,7 @@ public class MessageData {
         return responseBytes;
     }
 
-    public static String getMetadata()  {
+    public synchronized String getMetadata()  {
         //this may happen when there was .. ou ../ in the requested file name
         if(fileName.equals ("")) return "EXISTS:false \n";
 
@@ -58,7 +58,7 @@ public class MessageData {
         } else return "EXISTS:false \n";
     }
 
-    public static String getNomeFicheiro(){
+    public  String getNomeFicheiro(){
         //Regex looks for pattern that must be invalid when looking for file ../ or ..
         Pattern protecter = Pattern.compile ("(\\.\\.(\\/)?)");
         Matcher protect = protecter.matcher (command);
@@ -81,7 +81,7 @@ public class MessageData {
         return nome;
     }
 
-    public static void getOffset(){
+    public  void getOffset(){
         int nome =0; // depois a default vai ser 80 mas wharetver
         Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*(\\.(\\w|\\d)*)?");
         Matcher matcher = pattern.matcher(command);
@@ -94,7 +94,7 @@ public class MessageData {
         offset = nome;
     }
 
-    public static void getSize(){
+    public  void getSize(){
         int nome = 0; // depois a default vai ser 80 mas wharetver
         Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*(\\.(\\w|\\d)*)?");
         Matcher matcher = pattern.matcher(command);
@@ -123,7 +123,7 @@ public class MessageData {
         return -1;
     }
 
-    public static String filelistCheck(String fname)
+    public  String filelistCheck(String fname)
     {   System.out.println ("nome do file no check files: "+fname);
         String filenameFinal = "";
         int counterFiles = 0;

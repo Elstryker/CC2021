@@ -47,8 +47,7 @@ public class FastFileSrv {
     private void service() throws IOException {
 
         while (true) {
-
-            Runnable requester = new RequestHandler (socket);
+             Runnable requester = new RequestHandler (socket);
             /*
              * Use thread pool to allocate idle threads for processing
              * Currently connected client
