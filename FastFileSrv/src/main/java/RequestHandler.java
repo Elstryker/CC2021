@@ -1,14 +1,7 @@
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 class RequestHandler implements Runnable{
     private DatagramSocket socket;
@@ -24,36 +17,32 @@ class RequestHandler implements Runnable{
      * @param socket
      */
     public RequestHandler(DatagramSocket socket) throws IOException {
-        byte[] recebe = new byte[1000];
-        DatagramPacket request = new DatagramPacket(recebe, recebe.length);
+        byte[] receive = new byte[1000];
+        DatagramPacket request = new DatagramPacket(receive, receive.length);
         socket.receive(request); //The receive() method blocks until a datagram is received. And the following code sends a DatagramPacket to the client:
         this.socket = socket;
-        this.command = new String(recebe, 0, recebe.length);;
+        this.command = new String(receive, 0, receive.length);;
         this.message = new MessageData (command);
         this.request = request;
     }
 
     public void run() {
-
         try{
-            String resposta;
+            String responseS;
             switch (message.guessPedido ()){
                 case 1:
                     System.out.println("Metadata Request -" + command);
-                    resposta = message.getMetadata ();
-
-                    byte[] buffer = resposta.getBytes();
+                    responseS = message.getMetadata ();
+                    byte[] buffer = responseS.getBytes();
 
                     clientAddress = request.getAddress();
                     clientPort = request.getPort();
-
                     //Answers back with metadata
                     response = new DatagramPacket(buffer, buffer.length, clientAddress, clientPort);
                     socket.send(response);
                     break;
                 case 2:
                     System.out.println("GET File request -\n" + command);
-
                     //get only offset to offset + size bytes
                     byte[] responder = message.getFile();
 
@@ -69,14 +58,9 @@ class RequestHandler implements Runnable{
                     System.out.println("Unavailable request");
                     break;
             }
-
-
         }catch(Exception e){
             System.out.println (e);
-
         }
-
     }
-
 }
 

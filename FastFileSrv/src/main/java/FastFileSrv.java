@@ -1,16 +1,10 @@
 import java.io.*;
 import java.net.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class FastFileSrv {
     private final DatagramSocket socket;
-
     private ExecutorService threadPool;
 
     public FastFileSrv() throws SocketException {
@@ -37,15 +31,11 @@ public class FastFileSrv {
     }
 
     public static void main(String[] args) throws IOException {
-
         FastFileSrv server = new FastFileSrv();
         server.service();
-
-
     }
 
     private void service() throws IOException {
-
         while (true) {
              Runnable requester = new RequestHandler (socket);
             /*
@@ -53,10 +43,6 @@ public class FastFileSrv {
              * Currently connected client
              */
             threadPool.execute(requester);
-
         }
     }
-
-
-
 }

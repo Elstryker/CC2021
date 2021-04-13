@@ -16,7 +16,6 @@ public class MessageData {
     public MessageData(String command){
         this.command = command; // to be used to get offset and size
         fileName = getNomeFicheiro (); //filename with or withou extention
-
         if(!(fileName.contains ("."))){ //if nome doesn't have extention
             fileName = filelistCheck (fileName); //get fileName with extention;
         }
