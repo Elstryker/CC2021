@@ -134,4 +134,4 @@ fabric.properties
 *.mp3
 src/main/resources/
 target/
-src/main/security/
+src/main/security
