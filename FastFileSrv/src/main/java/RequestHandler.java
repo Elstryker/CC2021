@@ -21,7 +21,7 @@ class RequestHandler implements Runnable{
         DatagramPacket request = new DatagramPacket(receive, receive.length);
         socket.receive(request); //The receive() method blocks until a datagram is received. And the following code sends a DatagramPacket to the client:
         this.socket = socket;
-        this.command = new String(receive, 0, receive.length);;
+        this.command = new String(receive, 0, request.getLength());
         this.message = new MessageData (command);
         this.request = request;
     }
@@ -42,7 +42,7 @@ class RequestHandler implements Runnable{
                     socket.send(response);
                     break;
                 case 2:
-                    System.out.println("GET File request -\n" + command);
+                    System.out.println("GET File request -" + command);
                     //get only offset to offset + size bytes
                     byte[] responder = message.getFile();
 
@@ -59,7 +59,7 @@ class RequestHandler implements Runnable{
                     break;
             }
         }catch(Exception e){
-            System.out.println (e);
+            System.out.println (e.getMessage());
         }
     }
 }
