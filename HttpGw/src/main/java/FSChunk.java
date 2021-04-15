@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 public class FSChunk {
     // List of available servers
-    private HashMap<InetAddress,Integer> servers;
+    private HashMap<InetAddress,ArrayList<Integer>> servers;
     // Lock for thread managing
     private ReentrantLock lock;
     // Thread that manages connections from servers
@@ -39,7 +39,14 @@ public class FSChunk {
                 try {
                     lock.lock();
                     // Guarda o novo servidor disponivel
-                    servers.put(packet.getAddress(),packet.getPort());
+                    ArrayList<Integer> ports = servers.get(packet.getAddress());
+                    if (ports != null)
+                        ports.add(packet.getPort());
+                    else {
+                        ports = new ArrayList<>();
+                        ports.add(packet.getPort());
+                        servers.put(packet.getAddress(),ports);
+                    }
                 } finally {
                     lock.unlock();
                 }
@@ -60,7 +67,6 @@ public class FSChunk {
 
     public MyPair<byte[],String> retrieveFile(String fileName) throws SocketException, FileNotFoundException {
         DatagramSocket socket;
-        String metaData;
         socket = new DatagramSocket();
         // Get Random Server to fetch files
         MyPair<InetAddress,Integer> server = getServer();
@@ -78,19 +84,24 @@ public class FSChunk {
 
     private MyPair<InetAddress,Integer> getServer() {
         InetAddress serverAddress;
-        int port;
+        ArrayList<Integer> ports;
+        int destPort;
         try {
             lock.lock();
             // Getting keys of the Map as a list
             List<InetAddress> list = new ArrayList<>(servers.keySet());
             // Get a random element from the list
-            int random = new Random().nextInt(list.size());
-            serverAddress = list.get(random);
-            port = servers.get(serverAddress);
+            int randomIP = new Random().nextInt(list.size());
+            serverAddress = list.get(randomIP);
+            ports = servers.get(serverAddress);
+            int randomPort = new Random().nextInt(ports.size());
+            destPort = ports.get(randomPort);
+            System.out.println("IP: " + serverAddress.toString());
+            System.out.println("Ports: " + ports);
         } finally {
             lock.unlock();
         }
-        return new MyPair<>(serverAddress,port);
+        return new MyPair<>(serverAddress,destPort);
     }
 
     private byte[] getFile(DatagramSocket socket,String file, InetAddress destAddress,Integer destPort, int size) {
