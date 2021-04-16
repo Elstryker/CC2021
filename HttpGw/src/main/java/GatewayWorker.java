@@ -1,9 +1,7 @@
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
-// NOTA: NÃO FECHAR CENAS NUMA EXCEÇÃO
-//TODO: Apenas aceitar alguns clientes para ligações permanentes
-//TODO: fechar ligação persistente ao fim de x tempo de inatividade: (talvez usar o set timeout exception?)
 public class GatewayWorker implements Runnable{
 
     private final Socket clientSocket;
@@ -23,32 +21,37 @@ public class GatewayWorker implements Runnable{
             OutputStream clientOutput = clientSocket.getOutputStream();
             do {
                 System.out.println("Reading request!");
-                HTTPRequest request = readRequest(br);
-                keep_alive = request.persistent;
-                System.out.println(request.wholeRequest);
-                System.out.println(request.version);
+                try {
+                    clientSocket.setSoTimeout(5000); // Will only wait 5 seconds for a new request in a persistent connection
+                    HTTPRequest request = readRequest(br);
+                    clientSocket.setSoTimeout(0); // disable timeout while serving the request
+
+                    keep_alive = request.persistent;
+                    System.out.println(request.wholeRequest);
+                    System.out.println(request.version);
 //                System.out.println(request.wholeRequest);
 //                for (Map.Entry<String, String> key_value: request.headers.entrySet()){
 //                    System.out.println(key_value.getKey()+ " = " + key_value.getValue());
 //                }
-                String accessLog = String.format("Client %s, method %s, path %s, version %s, host %s, headers %s",
-                        clientSocket.toString(), request.method, request.path, request.version, request.host, request.headers.toString());
-               // System.out.println(accessLog);
-                System.out.println(request.file);
+
+                    String accessLog = String.format("Client %s, method %s, path %s, version %s, host %s, headers %s",
+                            clientSocket.toString(), request.method, request.path, request.version, request.host, request.headers.toString());
+                    // System.out.println(accessLog);
+                    System.out.println(request.file);
 
 
-                try {
                     try {
-                        Thread.sleep(5000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    MyPair<byte[],String> receive = protocol.retrieveFile(request.file);
-                    sendResponse(clientOutput, "200 OK", receive.getSecond(),request.file, receive.getFirst());
+                        MyPair<byte[],String> receive = protocol.retrieveFile(request.file);
+                        sendResponse(clientOutput, "200 OK", receive.getSecond(),request.file, receive.getFirst());
 
-                } catch (FileNotFoundException e) {
-                    byte[] notFoundContent = "<h1>Not found :(</h1>".getBytes();
-                    sendResponse(clientOutput, "404 Not Found","text/html", request.file, notFoundContent);
+                    } catch (FileNotFoundException e) {
+                        byte[] notFoundContent = "<h1>Not found :(</h1>".getBytes();
+                        sendResponse(clientOutput, "404 Not Found","text/html", request.file, notFoundContent);
+                    }
+
+                } catch (SocketTimeoutException | NullPointerException e){ //
+                   // e.printStackTrace();
+                    keep_alive = false;
                 }
             } while(keep_alive);
             System.out.println("Exited");
@@ -60,8 +63,8 @@ public class GatewayWorker implements Runnable{
         }
     }
 
-
-    private HTTPRequest readRequest(BufferedReader br) throws IOException {
+    // Throws NullPointerException when the communication pipe is broken by clients such as wget and curl
+    private HTTPRequest readRequest(BufferedReader br) throws IOException, NullPointerException {
         StringBuilder requestBuilder = new StringBuilder();
         String line;
         while (!(line = br.readLine()).isBlank()) {
