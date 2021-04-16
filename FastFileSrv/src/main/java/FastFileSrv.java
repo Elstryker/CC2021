@@ -21,8 +21,8 @@ public class FastFileSrv {
 
     private void sendAuthenticationPacket() {
         byte[] aut = new byte[1];
-        boolean sent = false;
-        while(!sent) {
+        boolean authCompleted = false;
+        while(!authCompleted) {
             try {
                 socket.setSoTimeout(1000);
                 DatagramPacket packet = new DatagramPacket(aut, aut.length, InetAddress.getByName("localhost"), 12345);
@@ -31,7 +31,7 @@ public class FastFileSrv {
                 packet = new DatagramPacket(aut, aut.length);
                 System.out.println("Espero Resposta");
                 socket.receive(packet);
-                sent = true;
+                authCompleted = true;
                 socket.setSoTimeout(0);
             } catch (IOException e) {
                 System.out.println(e.getMessage());

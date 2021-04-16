@@ -15,8 +15,6 @@ public class FSChunk {
     private HashMap<InetAddress,ArrayList<Integer>> servers;
     // Lock for thread managing on servers structure
     private ReentrantLock serversLock;
-    // Thread that manages connections from servers
-    private Thread accepter;
     // Socket for accepter thread
     private DatagramSocket accepterSocket;
     // Socket Pool
@@ -26,13 +24,12 @@ public class FSChunk {
     public FSChunk() throws SocketException {
         servers = new HashMap<>();
         accepterSocket = new DatagramSocket(12345);
-        accepter = new Thread(this::accepterWorkFlow);
         serversLock = new ReentrantLock();
         socketPool = new SocketPool(1000);
     }
 
     public void start() {
-        accepter.start();
+        new Thread(this::accepterWorkFlow).start();
     }
 
     private void accepterWorkFlow() {
@@ -65,7 +62,7 @@ public class FSChunk {
     private void saveServer(InetAddress address, int port) {
         try {
             serversLock.lock();
-            // Guarda o novo servidor disponivel
+            // Save the new available server
             ArrayList<Integer> ports = servers.get(address);
             if (ports != null)
                 ports.add(port);
@@ -82,7 +79,7 @@ public class FSChunk {
     private void deleteServer(InetAddress address, int port) {
         try {
             serversLock.lock();
-            // Retira o servidor da estrutura
+            // Remove server form the structure
             ArrayList<Integer> ports = servers.get(address);
             if(ports.size() > 1) {
                 ports.remove((Integer) port);

@@ -65,7 +65,7 @@ public class FSChunkWorker {
     }
 
     private byte[] requestData(byte[] message) {
-        boolean sent = false;
+        boolean authCompleted = false;
         byte[] receivedBytes = new byte[maxLength];
         DatagramPacket receivePacket = null, sendPacket;
         try {
@@ -75,7 +75,7 @@ public class FSChunkWorker {
             System.out.println(e.getMessage());
         }
         // Timeout control cycle
-        while(!sent) {
+        while(!authCompleted) {
             try {
                 // Get Server to send
                 MyPair<InetAddress,Integer> destinationServer;
@@ -95,7 +95,7 @@ public class FSChunkWorker {
                 receivePacket = new DatagramPacket(receivedBytes, receivedBytes.length);
                 socket.receive(receivePacket);
                 // If it reaches here it's because he received the packet and exits the cycle
-                sent = true;
+                authCompleted = true;
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }

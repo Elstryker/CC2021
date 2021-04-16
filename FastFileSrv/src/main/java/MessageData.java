@@ -31,7 +31,7 @@ public class MessageData {
         if (!(fileName.contains("."))) //if nome doesn't have extention
             fileName = filelistCheck(fileName); //get fileName with extention;
     }
-    public synchronized byte[] getFile() throws IOException {
+    public byte[] getFile() throws IOException {
         System.out.println ("nome do ficheiro a pegar: "+fileName);
         File f = new File("src/main/resources/"+ fileName);
         byte[] responseBytes = new byte[size];
@@ -44,7 +44,7 @@ public class MessageData {
         return responseBytes;
     }
 
-    public synchronized String getMetadata()  {
+    public String getMetadata()  {
         //this may happen when there was .. ou ../ in the requested file name
         if(fileName.equals ("")) return "EXISTS:false \n";
 
