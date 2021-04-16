@@ -1,3 +1,8 @@
+package ClientHandler;
+
+import FSChunk.FSChunk;
+import Utils.MyPair;
+
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -22,7 +27,7 @@ public class GatewayWorker implements Runnable{
             do {
                 System.out.println("Reading request!");
                 try {
-                    clientSocket.setSoTimeout(5000); // Will only wait 5 seconds for a new request in a persistent connection
+                    clientSocket.setSoTimeout(10000); // Will only wait 5 seconds for a new request in a persistent connection
                     HTTPRequest request = readRequest(br);
                     clientSocket.setSoTimeout(0); // disable timeout while serving the request
 

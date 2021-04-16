@@ -1,3 +1,5 @@
+package Utils;
+
 public class MyPair<F,S> {
     private final F first;
     private final S second;

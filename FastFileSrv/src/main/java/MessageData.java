@@ -8,21 +8,30 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MessageData {
-    private String command;
+    private final String type;
     private int offset;
     private int size;
     private String fileName;
 
     public MessageData(String command){
-        this.command = command; // to be used to get offset and size
-        fileName = getNomeFicheiro (); //filename with or withou extention
-        if(!(fileName.contains ("."))){ //if nome doesn't have extention
-            fileName = filelistCheck (fileName); //get fileName with extention;
+        String[] tokens = command.trim().split(" ");
+        type = tokens[0];
+        fileName = "";
+        if(type.equals("INFO")) {
+            fileName = tokens[1];
         }
+        else {
+            offset = Integer.parseInt(tokens[1]);
+            size = Integer.parseInt(tokens[2]);
+            fileName = tokens[3];
+            // Filtering invalid positions or names
+            if(fileName.contains("../") || fileName.contains(".."))
+                fileName = "";
+        }
+        if (!(fileName.contains("."))) //if nome doesn't have extention
+            fileName = filelistCheck(fileName); //get fileName with extention;
     }
-    public synchronized byte[] getFile() throws IOException {
-        getOffset ();
-        getSize ();
+    public byte[] getFile() throws IOException {
         System.out.println ("nome do ficheiro a pegar: "+fileName);
         File f = new File("src/main/resources/"+ fileName);
         byte[] responseBytes = new byte[size];
@@ -35,7 +44,7 @@ public class MessageData {
         return responseBytes;
     }
 
-    public synchronized String getMetadata()  {
+    public String getMetadata()  {
         //this may happen when there was .. ou ../ in the requested file name
         if(fileName.equals ("")) return "EXISTS:false \n";
 
@@ -57,72 +66,11 @@ public class MessageData {
         } else return "EXISTS:false \n";
     }
 
-    public  String getNomeFicheiro(){
-        //Regex looks for pattern that must be invalid when looking for file ../ or ..
-        Pattern protecter = Pattern.compile ("(\\.\\.(\\/)?)");
-        Matcher protect = protecter.matcher (command);
-        if(protect.find ()) {
-            System.out.println ("DEBUG: Found invalid file name\n!");
-            return "";
-        }
-        String nome = "";
-        Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*(\\.(\\w|\\d)*)?");
-        Matcher matcher = pattern.matcher(command);
-        if (matcher.find())
-        {   String r = matcher.group ();
-            String[] parts = r.split(" ");
-            try {
-                nome = parts[3];
-            } catch(ArrayIndexOutOfBoundsException a) {
-                nome = parts[1];
-            }
-        }
-        return nome;
+    public String getType() {
+        return type;
     }
 
-    public  void getOffset(){
-        int nome =0; // depois a default vai ser 80 mas wharetver
-        Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*(\\.(\\w|\\d)*)?");
-        Matcher matcher = pattern.matcher(command);
-        if (matcher.find())
-        {
-            String r = matcher.group ();
-            String[] parts = r.split(" ");
-            nome = Integer.parseInt (parts[1]);
-        }
-        offset = nome;
-    }
-
-    public  void getSize(){
-        int nome = 0; // depois a default vai ser 80 mas wharetver
-        Pattern pattern = Pattern.compile("((GET\\s\\d*\\s\\d*)|(INFO))\\s(\\w|\\s)*(\\.(\\w|\\d)*)?");
-        Matcher matcher = pattern.matcher(command);
-        if (matcher.find())
-        {
-            String r = matcher.group ();
-            String[] parts = r.split(" ");
-            nome = Integer.parseInt (parts[2]);
-        }
-        size = nome;
-    }
-
-    public int guessPedido(){
-        Pattern pattern = Pattern.compile("INFO");
-        Matcher matcher = pattern.matcher(command);
-        if (matcher.find()) //request get metadata
-        {
-            return 1;
-        }
-        pattern = Pattern.compile("GET");
-        matcher = pattern.matcher(command);
-        if (matcher.find()) //request get file
-        {
-            return 2;
-        }
-        return -1;
-    }
-
-    public  String filelistCheck(String fname)
+    public String filelistCheck(String fname)
     {   System.out.println ("nome do file no check files: "+fname);
         String filenameFinal = "";
         int counterFiles = 0;

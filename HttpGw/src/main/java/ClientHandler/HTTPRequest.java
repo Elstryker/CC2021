@@ -1,4 +1,6 @@
+package ClientHandler;
 import java.util.*;
+
 
 public class HTTPRequest {
     public String method, path, version, host;
