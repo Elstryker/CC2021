@@ -1,3 +1,5 @@
+package FSChunk;
+
 public class FileMetaData {
     private final boolean exists;
     private final int size;

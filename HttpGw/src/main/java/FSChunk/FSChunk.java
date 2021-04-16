@@ -1,3 +1,8 @@
+package FSChunk;
+
+import Utils.MyPair;
+import Utils.SocketPool;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.*;
@@ -10,18 +15,12 @@ public class FSChunk {
     private HashMap<InetAddress,ArrayList<Integer>> servers;
     // Lock for thread managing on servers structure
     private ReentrantLock serversLock;
-    // Socket Pool Lock
-    private ReentrantLock socketsLock;
-    // Condition for threads waiting to use sockets
-    private Condition socketsCondition;
     // Thread that manages connections from servers
     private Thread accepter;
     // Socket for accepter thread
     private DatagramSocket accepterSocket;
-    // Socket Pool that maps a socket to a state that determines if it's being used or not (True -> Available, False -> Unavailable)
-    private HashMap<DatagramSocket,Boolean> sockets;
-    // Max number of sockets
-    private int maxSockets;
+    // Socket Pool
+    private SocketPool socketPool;
 
 
     public FSChunk() throws SocketException {
@@ -29,13 +28,7 @@ public class FSChunk {
         accepterSocket = new DatagramSocket(12345);
         accepter = new Thread(this::accepterWorkFlow);
         serversLock = new ReentrantLock();
-        socketsLock = new ReentrantLock();
-        maxSockets = 1000;
-        sockets = new HashMap<>();
-        for(int i = 0; i < maxSockets; i++) {
-            sockets.put(new DatagramSocket(),true);
-        }
-        socketsCondition = socketsLock.newCondition();
+        socketPool = new SocketPool(1000);
     }
 
     public void start() {
@@ -107,12 +100,12 @@ public class FSChunk {
     */
 
     public MyPair<byte[],String> retrieveFile(String fileName) throws SocketException, FileNotFoundException {
-        DatagramSocket socket = getSocket();
+        DatagramSocket socket = socketPool.getSocket();
         // Get Random Server to fetch files
-        MyPair<InetAddress,Integer> server = getServer();
+        MyPair<InetAddress,Integer> server = getRandomServer();
         // Get MetaData Information
         FileMetaData fileMetaData = getMetaData(socket, fileName, server.getFirst(), server.getSecond());
-        releaseSocket(socket);
+        socketPool.releaseSocket(socket);
         // Debugging metaData information
         System.out.println("\n" + fileMetaData.toString() + "\n\n");
         // Get file from server if file exists, else throw exception
@@ -123,7 +116,7 @@ public class FSChunk {
         else throw new FileNotFoundException("File Not Found");
     }
 
-    private MyPair<InetAddress,Integer> getServer() {
+    private MyPair<InetAddress,Integer> getRandomServer() {
         InetAddress serverAddress;
         ArrayList<Integer> ports;
         int destPort;
@@ -151,7 +144,7 @@ public class FSChunk {
             int packets = size / packetLength;
             DatagramSocket socket;
             // Get socket from pool
-            socket = getSocket();
+            socket = socketPool.getSocket();
             try {
                 HashMap<InetAddress, ArrayList<Integer>> servers = getServers();
                 // Initiate worker
@@ -170,7 +163,7 @@ public class FSChunk {
                 }
             } finally {
                 // Release socket from pool
-                releaseSocket(socket);
+                socketPool.releaseSocket(socket);
             }
         } catch (NoSuchFieldException e) {
             System.out.println(e.getMessage());
@@ -193,44 +186,6 @@ public class FSChunk {
             serversLock.unlock();
         }
         return result;
-    }
-
-    private DatagramSocket getSocket() {
-        // Get a socket from the pool and update its state
-        DatagramSocket socket = null;
-        try {
-            socketsLock.lock();
-            while(socket == null) {
-                for (Map.Entry<DatagramSocket, Boolean> entry : sockets.entrySet()) {
-                    if (entry.getValue()) {
-                        socket = entry.getKey();
-                        sockets.put(socket, false);
-                        break;
-                    }
-                }
-                // If there wasn't any socket available, thread waits
-                if(socket == null)
-                    socketsCondition.await();
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            socketsLock.unlock();
-        }
-        return socket;
-    }
-
-    private void releaseSocket(DatagramSocket socket) {
-        try {
-            // Update socket availability to true
-            socketsLock.lock();
-            sockets.put(socket,true);
-            // Wakes up any threads waiting for sockets
-            socketsCondition.signalAll();
-        } finally {
-            socketsLock.unlock();
-        }
-
     }
 
     private FileMetaData getMetaData(DatagramSocket socket, String file, InetAddress destAddress, Integer destPort) {

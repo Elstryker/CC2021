@@ -19,8 +19,6 @@ public class MessageData {
         fileName = "";
         if(type.equals("INFO")) {
             fileName = tokens[1];
-            if (!(fileName.contains("."))) //if nome doesn't have extention
-                fileName = filelistCheck(fileName); //get fileName with extention;
         }
         else {
             offset = Integer.parseInt(tokens[1]);
@@ -29,9 +27,9 @@ public class MessageData {
             // Filtering invalid positions or names
             if(fileName.contains("../") || fileName.contains(".."))
                 fileName = "";
-            if(!(fileName.contains ("."))) //if nome doesn't have extention
-                fileName = filelistCheck (fileName); //get fileName with extention;
         }
+        if (!(fileName.contains("."))) //if nome doesn't have extention
+            fileName = filelistCheck(fileName); //get fileName with extention;
     }
     public synchronized byte[] getFile() throws IOException {
         System.out.println ("nome do ficheiro a pegar: "+fileName);
@@ -68,13 +66,8 @@ public class MessageData {
         } else return "EXISTS:false \n";
     }
 
-    public int guessPedido(){
-        int code = -1;
-        if(type.equals("INFO"))
-            code = 1;
-        else if(type.equals("GET"))
-            code = 2;
-        return code;
+    public String getType() {
+        return type;
     }
 
     public String filelistCheck(String fname)

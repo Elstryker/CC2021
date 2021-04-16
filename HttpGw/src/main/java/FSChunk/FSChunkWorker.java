@@ -1,7 +1,9 @@
+package FSChunk;
+
+import Utils.MyPair;
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -77,6 +79,7 @@ public class FSChunkWorker {
             try {
                 // Get Server to send
                 MyPair<InetAddress,Integer> destinationServer;
+                // If pointer equals -1 means that it does not need round robin technique and selects the only server available
                 if(serverPointer == -1)
                     destinationServer = servers.get(0);
                 else {
