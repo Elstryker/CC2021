@@ -1,4 +1,4 @@
-package ClientSide;
+package ClientHandler;
 
 import FSChunk.FSChunk;
 import Utils.MyPair;

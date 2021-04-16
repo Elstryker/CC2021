@@ -7,7 +7,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.security.*;
 
-import ClientSide.GatewayWorker;
+import ClientHandler.GatewayWorker;
 import FSChunk.FSChunk;
 import io.github.cdimascio.dotenv.Dotenv;
 
