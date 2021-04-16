@@ -1,14 +1,14 @@
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class HTTPRequest {
     public String method, path, version, host;
     public String file;
-    public List<String> headers = new ArrayList<>();
+    public Map<String, String> headers = new HashMap<>();
+    public String wholeRequest;
+    public boolean persistent;
 
     public HTTPRequest(String request) {
+        wholeRequest = request;
         String[] requestsLines = request.split("\n");
         String[] requestLine = requestsLines[0].split(" ");
         method = requestLine[0];
@@ -19,7 +19,14 @@ public class HTTPRequest {
 
         for (int h = 2; h < requestsLines.length; h++) {
             String header = requestsLines[h];
-            headers.add(header);
+            String[] key_value = header.split(": ");
+            headers.put(key_value[0], key_value[1]);
+        }
+
+        if (headers.containsKey("Connection")){
+            persistent = headers.get("Connection").equalsIgnoreCase("keep-alive");
+        }else{
+            persistent = false;
         }
     }
 

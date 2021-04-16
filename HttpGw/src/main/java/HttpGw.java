@@ -19,6 +19,7 @@ public class HttpGw {
                 System.out.println("HTTP Server setup");
                 while (true) {
                     Socket client = serverSocket.accept();
+                    System.out.println("New socket");
                     new Thread(new GatewayWorker(client, protocol)).start();
                 }
             } catch (IOException e) {

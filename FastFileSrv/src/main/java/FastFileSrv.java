@@ -74,9 +74,9 @@ public class FastFileSrv {
                     resposta = getNomeFicheiro (quote);
                     offset = getOffset(quote);
                     size = getSize(quote);
-                    System.out.println ("hello? :"+ resposta);
+                  //  System.out.println ("hello? :"+ resposta);
 
-                    //get only offset to offset + size bytes
+                     //get only offset to offset + size bytes
                     byte[] responder = getFile(resposta,offset,size);
 
                     clientAddress = request.getAddress();
@@ -85,7 +85,7 @@ public class FastFileSrv {
                     response = new DatagramPacket(responder, responder.length, clientAddress, clientPort);
                     socket.send(response);
 
-                    System.out.println ("Packets sent");
+                   // System.out.println ("Packets sent");
                     break;
                 default:
                     System.out.println("Unavailable request");
