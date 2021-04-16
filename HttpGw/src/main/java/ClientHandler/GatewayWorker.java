@@ -1,8 +1,10 @@
+package ClientHandler;
+
+import FSChunk.FSChunk;
+import Utils.MyPair;
+
 import java.io.*;
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class GatewayWorker implements Runnable{
 

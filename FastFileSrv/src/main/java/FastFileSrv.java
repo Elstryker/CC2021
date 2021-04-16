@@ -9,9 +9,20 @@ public class FastFileSrv {
 
     public FastFileSrv() throws SocketException {
         socket = new DatagramSocket();
+        sendAuthenticationPacket();
+        System.out.println("Autenticado!");
+        threadPool = Executors.newFixedThreadPool (100);
+    }
+
+    public static void main(String[] args) throws IOException {
+        FastFileSrv server = new FastFileSrv();
+        server.service();
+    }
+
+    private void sendAuthenticationPacket() {
         byte[] aut = new byte[1];
-        boolean sent = false;
-        while(!sent) {
+        boolean authCompleted = false;
+        while(!authCompleted) {
             try {
                 socket.setSoTimeout(1000);
                 DatagramPacket packet = new DatagramPacket(aut, aut.length, InetAddress.getByName("localhost"), 12345);
@@ -20,19 +31,12 @@ public class FastFileSrv {
                 packet = new DatagramPacket(aut, aut.length);
                 System.out.println("Espero Resposta");
                 socket.receive(packet);
-                threadPool = Executors.newFixedThreadPool (100);
-                sent = true;
+                authCompleted = true;
+                socket.setSoTimeout(0);
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
         }
-        System.out.println("Autenticado!");
-        socket.setSoTimeout(0);
-    }
-
-    public static void main(String[] args) throws IOException {
-        FastFileSrv server = new FastFileSrv();
-        server.service();
     }
 
     private void service() throws IOException {

@@ -1,6 +1,6 @@
-import java.nio.file.Paths;
+package ClientHandler;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class HTTPRequest {
