@@ -6,10 +6,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.security.*;
+import io.github.cdimascio.dotenv.Dotenv;
 
 import ClientHandler.GatewayWorker;
 import FSChunk.FSChunk;
-import io.github.cdimascio.dotenv.Dotenv;
+
 
 public class HttpGw {
     public static void main( String[] args ) throws SocketException {
@@ -22,6 +23,7 @@ public class HttpGw {
                 System.out.println("HTTP Server setup");
                 while (true) {
                     Socket client = serverSocket.accept();
+                    System.out.println("New socket");
                     new Thread(new GatewayWorker(client, protocol)).start();
                 }
             } catch (IOException e) {

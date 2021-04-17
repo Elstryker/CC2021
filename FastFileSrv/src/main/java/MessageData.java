@@ -8,7 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MessageData {
-    private String type;
+    private final String type;
     private int offset;
     private int size;
     private String fileName;
