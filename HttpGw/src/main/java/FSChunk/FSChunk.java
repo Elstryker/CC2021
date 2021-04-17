@@ -134,6 +134,7 @@ public class FSChunk {
         return new MyPair<>(serverAddress,destPort);
     }
 
+    /*
     private byte[] getFile(String file, int size) {
         byte[] fileContent = new byte[size];
         try {
@@ -166,6 +167,62 @@ public class FSChunk {
             System.out.println(e.getMessage());
         }
         return fileContent;
+    }
+     */
+
+    private byte[] getFile(String file, int size) {
+        ArrayList<ArrayList<Integer>> offSetsForThreads = new ArrayList<>();
+        int numThreads = 5, packetSize = 1024, pointer = 0;
+        int offsets = size / packetSize;
+        boolean last = false;
+        int lastOffset = offsets;
+        if(size % packetSize != 0) {
+            last = true;
+            lastOffset = offsets + 1;
+        }
+        for(int i = 0; i < numThreads; i++)
+            offSetsForThreads.add(new ArrayList<>());
+        for(int i = 0; i < offsets; i++) {
+            offSetsForThreads.get(pointer).add(i);
+            pointer = (pointer + 1) % numThreads;
+        }
+        if(last)
+            offSetsForThreads.get(0).add(lastOffset - 1);
+        Map<Integer,byte[]> fileContent = new HashMap<>();
+        ReentrantLock fileContentLock = new ReentrantLock();
+        ArrayList<DatagramSocket> socketsUsed = new ArrayList<>();
+        HashMap<InetAddress,ArrayList<Integer>> servers = getServers();
+        ArrayList<ChunkThread> threads = new ArrayList<>();
+        for (int i = 0; i < numThreads; i++) {
+            DatagramSocket socket = socketPool.getSocket();
+            socketsUsed.add(socket);
+            ChunkThread thread = new ChunkThread(offSetsForThreads.get(i),
+                    file,
+                    size,
+                    packetSize,
+                    i == 0 && last,
+                    fileContent,
+                    fileContentLock,
+                    socket,
+                    servers
+            );
+            thread.start();
+            threads.add(thread);
+        }
+        for (int i = 0; i < numThreads; i++) {
+            try {
+                threads.get(i).join();
+            } catch (InterruptedException e) {
+                System.out.println(e.getMessage());
+            }
+            socketPool.releaseSocket(socketsUsed.get(i));
+        }
+        byte[] fileCont = new byte[size];
+        for (int i = 0; i < lastOffset; i++) {
+            System.arraycopy(fileContent.get(i),0,fileCont,i * packetSize,fileContent.get(i).length);
+
+        }
+        return fileCont;
     }
 
     private HashMap<InetAddress,ArrayList<Integer>> getServers() {
