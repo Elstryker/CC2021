@@ -2,6 +2,7 @@ package FSChunk;
 
 import Utils.MyPair;
 import Utils.SocketPool;
+import Utils.Timer;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -171,31 +172,78 @@ public class FSChunk {
      */
 
     private byte[] getFile(String file, int size) {
+        // Matrix that assigns a list of offsets to the respective thread
         ArrayList<ArrayList<Integer>> offSetsForThreads = new ArrayList<>();
-        int numThreads = 5, packetSize = 1024, pointer = 0;
-        int offsets = size / packetSize;
+        int numThreads = 30, packetSize = 1024 * 5;
+        // Checking time to download the files
+        Timer.start();
+        int numEqualLengthPackets = size / packetSize;
+        // Boolean to determine if the file needs a last packet that has not the same size and the others
         boolean last = false;
-        int lastOffset = offsets;
+        // We presume that the last packet has the same length as the remaining ones
+        int lastOffset = numEqualLengthPackets;
+        // Structure that maps offset packet to the corresponding bytes of the file
+        // It has a condition so the thread collecting the data can sleep on it if the data hasn't been retrieved yet
+        HashMap<Integer,MyPair<Condition,byte[]>> fileContent = new HashMap<>();
+        ReentrantLock fileContentLock = new ReentrantLock();
+        // Check if the last different sized packet is needed and update the lastOffest variable if affirmative
         if(size % packetSize != 0) {
             last = true;
-            lastOffset = offsets + 1;
+            lastOffset = numEqualLengthPackets + 1;
         }
+        // Initialization of structures and population of offsets matrix
+        initializeOffSetsAndDataStructure(offSetsForThreads,fileContent,fileContentLock,numThreads,numEqualLengthPackets,lastOffset);
+        try {
+            // Different threads are created and run with the respective list of offsets to retrive from the server
+            threadCreationAndRun(numThreads,offSetsForThreads,file,size,packetSize,last,fileContent,fileContentLock);
+        } catch (InterruptedException e) {
+            System.out.println(e.getMessage());
+        }
+        // Final file content byte array
+        byte[] fileContentArray = new byte[size];
+        // Thread that collects the data retrieved from the past threads and order the various chunks
+        DataRetrieverThread dataRetrieverThread = new DataRetrieverThread(fileContentArray,fileContent,fileContentLock,packetSize,lastOffset);
+        dataRetrieverThread.start();
+        try {
+            dataRetrieverThread.join();
+        } catch (InterruptedException e) {
+            System.out.println(e.getMessage());
+        }
+        Timer.stop();
+        System.out.println(Timer.getTimeString());
+        return fileContentArray;
+    }
+
+    private void initializeOffSetsAndDataStructure(ArrayList<ArrayList<Integer>> offSetsForThreads,
+                                                   HashMap<Integer,MyPair<Condition,byte[]>> fileContent,
+                                                   ReentrantLock fileContentLock,
+                                                   int numThreads,
+                                                   int numEqualLengthPackets,
+                                                   int lastOffset) {
+        int pointer = 0;
         for(int i = 0; i < numThreads; i++)
             offSetsForThreads.add(new ArrayList<>());
-        for(int i = 0; i < offsets; i++) {
+        // Populate offset matrix with the round robin algorithm
+        for(int i = 0; i < numEqualLengthPackets; i++) {
             offSetsForThreads.get(pointer).add(i);
             pointer = (pointer + 1) % numThreads;
         }
-        if(last)
+        // Add the different sized packet at last if it exists
+        if(numEqualLengthPackets != lastOffset)
             offSetsForThreads.get(0).add(lastOffset - 1);
-        Map<Integer,byte[]> fileContent = new HashMap<>();
-        ReentrantLock fileContentLock = new ReentrantLock();
-        ArrayList<DatagramSocket> socketsUsed = new ArrayList<>();
+        MyPair<Condition,byte[]> temporaryPair;
+        for(int i = 0; i < lastOffset; i++) {
+            temporaryPair = new MyPair<>(fileContentLock.newCondition(),null);
+            fileContent.put(i,temporaryPair);
+        }
+    }
+
+    private void threadCreationAndRun(int numThreads, ArrayList<ArrayList<Integer>> offSetsForThreads,
+                                      String file, int size, int packetSize, boolean last, Map<Integer,
+                                      MyPair<Condition,byte[]>> fileContent,
+                                      ReentrantLock fileContentLock) throws InterruptedException {
         HashMap<InetAddress,ArrayList<Integer>> servers = getServers();
-        ArrayList<ChunkThread> threads = new ArrayList<>();
         for (int i = 0; i < numThreads; i++) {
-            DatagramSocket socket = socketPool.getSocket();
-            socketsUsed.add(socket);
             ChunkThread thread = new ChunkThread(offSetsForThreads.get(i),
                     file,
                     size,
@@ -203,26 +251,11 @@ public class FSChunk {
                     i == 0 && last,
                     fileContent,
                     fileContentLock,
-                    socket,
+                    socketPool,
                     servers
             );
             thread.start();
-            threads.add(thread);
         }
-        for (int i = 0; i < numThreads; i++) {
-            try {
-                threads.get(i).join();
-            } catch (InterruptedException e) {
-                System.out.println(e.getMessage());
-            }
-            socketPool.releaseSocket(socketsUsed.get(i));
-        }
-        byte[] fileCont = new byte[size];
-        for (int i = 0; i < lastOffset; i++) {
-            System.arraycopy(fileContent.get(i),0,fileCont,i * packetSize,fileContent.get(i).length);
-
-        }
-        return fileCont;
     }
 
     private HashMap<InetAddress,ArrayList<Integer>> getServers() {

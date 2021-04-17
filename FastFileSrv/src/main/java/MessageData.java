@@ -32,7 +32,6 @@ public class MessageData {
             fileName = filelistCheck(fileName); //get fileName with extention;
     }
     public byte[] getFile() throws IOException {
-        System.out.println ("nome do ficheiro a pegar: "+fileName);
         File f = new File("src/main/resources/"+ fileName);
         byte[] responseBytes = new byte[size];
         RandomAccessFile raf = new RandomAccessFile(f, "rw");
@@ -48,7 +47,6 @@ public class MessageData {
         //this may happen when there was .. ou ../ in the requested file name
         if(fileName.equals ("")) return "EXISTS:false \n";
 
-        System.out.println ("nome do ficheiro dos metadados: "+fileName);
         Path filePath = Path.of ("src/main/resources/"+fileName);
 
         if(Files.exists(filePath)) {
@@ -71,7 +69,7 @@ public class MessageData {
     }
 
     public String filelistCheck(String fname)
-    {   System.out.println ("nome do file no check files: "+fname);
+    {
         String filenameFinal = "";
         int counterFiles = 0;
         File folder = new File("src/main/resources/");
