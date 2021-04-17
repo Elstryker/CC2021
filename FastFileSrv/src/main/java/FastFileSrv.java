@@ -5,7 +5,7 @@ import java.util.concurrent.Executors;
 
 public class FastFileSrv {
     private final DatagramSocket socket;
-    private ExecutorService threadPool;
+    private final ExecutorService threadPool;
 
     public FastFileSrv() throws SocketException {
         socket = new DatagramSocket();
