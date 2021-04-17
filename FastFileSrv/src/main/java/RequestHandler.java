@@ -27,6 +27,7 @@ class RequestHandler implements Runnable{
     }
 
     public void run() {
+        System.out.println ("estou no run");
         System.out.println("Request: " + command);
         try{
             if(message.getType().equals("INFO"))
