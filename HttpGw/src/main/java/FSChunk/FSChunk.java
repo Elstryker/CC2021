@@ -174,7 +174,9 @@ public class FSChunk {
     private byte[] getFile(String file, int size) {
         // Matrix that assigns a list of offsets to the respective thread
         ArrayList<ArrayList<Integer>> offSetsForThreads = new ArrayList<>();
-        int numThreads = 30, packetSize = 1024 * 5;
+        int numThreads = (size / (15 * 1024 * 1024)) + 1;
+        System.out.println("Number of threads: " + numThreads);
+        int packetSize = 1024 * 5;
         // Checking time to download the files
         Timer.start();
         int numEqualLengthPackets = size / packetSize;
