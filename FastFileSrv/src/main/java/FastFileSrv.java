@@ -40,11 +40,10 @@ public class FastFileSrv {
     }
 
     private void service() throws IOException {
-        Runnable waiter = new Quitter (socket);
-        threadPool.execute (waiter);
+        Runnable quitter = new Quitter ();
+        threadPool.execute (quitter);
         while (true) {
-
-             Runnable requester = new RequestHandler (socket);
+            Runnable requester = new RequestHandler (socket);
             /*
              * Use thread pool to allocate idle threads for processing
              * Currently connected client
