@@ -41,7 +41,7 @@ public class FSChunk {
                 // Aceita novo pedido
                 accepterSocket.receive(packet);
                 String request = new String(packet.getData(),0, packet.getLength());
-                if(request.equals("Quit")) {
+                if(request.equals("quit")) {
                     deleteServer(packet.getAddress(), packet.getPort());
                     // Confirmação por linha de comando
                     System.out.printf("Deleted server from Address: %s, from Port: %s%n\n",packet.getAddress(),packet.getPort());
