@@ -11,7 +11,7 @@ public class FSChunkWorker {
     private DatagramSocket socket;
     private String file;
     private ArrayList<MyPair<InetAddress,Integer>> servers;
-    private int maxLength = 1050;
+    private int maxLength = 1050 * 5;
     private int serverPointer;
 
     public FSChunkWorker(DatagramSocket sock, InetAddress serverAddress, Integer serverPort) {
@@ -84,9 +84,7 @@ public class FSChunkWorker {
                     destinationServer = servers.get(0);
                 else {
                     destinationServer = servers.get(serverPointer);
-                    if (serverPointer == servers.size()-1)
-                        serverPointer = 0;
-                    else serverPointer++;
+                    serverPointer = (serverPointer + 1) % servers.size();
                 }
                 // Send Packet
                 sendPacket = new DatagramPacket(message, message.length, destinationServer.getFirst(), destinationServer.getSecond());

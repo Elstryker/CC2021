@@ -2,6 +2,7 @@ package FSChunk;
 
 import Utils.MyPair;
 import Utils.SocketPool;
+import Utils.Timer;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -135,37 +136,91 @@ public class FSChunk {
     }
 
     private byte[] getFile(String file, int size) {
-        byte[] fileContent = new byte[size];
+        // Matrix that assigns a list of offsets to the respective thread
+        ArrayList<ArrayList<Integer>> offSetsForThreads = new ArrayList<>();
+        int numThreads = (size / (15 * 1024 * 1024)) + 1;
+        System.out.println("Number of threads: " + numThreads);
+        int packetSize = 1024 * 5;
+        // Checking time to download the files
+        Timer.start();
+        int numEqualLengthPackets = size / packetSize;
+        // Boolean to determine if the file needs a last packet that has not the same size and the others
+        boolean last = size % packetSize != 0;
+        int lastOffset;
+        // Structure that maps offset packet to the corresponding bytes of the file
+        // It has a condition so the thread collecting the data can sleep on it if the data hasn't been retrieved yet
+        HashMap<Integer,MyPair<Condition,byte[]>> fileContent = new HashMap<>();
+        ReentrantLock fileContentLock = new ReentrantLock();
+        // Check if the last different sized packet is needed and update the lastOffest variable if affirmative
+        if(last) {
+            lastOffset = numEqualLengthPackets + 1;
+        }
+        else
+            lastOffset = numEqualLengthPackets;
+        // Initialization of structures and population of offsets matrix
+        initializeOffsetsAndDataStructure(offSetsForThreads,fileContent,fileContentLock,numThreads,numEqualLengthPackets,lastOffset);
         try {
-            int offset = 0, packetLength = 1024, fileContentSize = 0;
-            int packets = size / packetLength;
-            DatagramSocket socket;
-            // Get socket from pool
-            socket = socketPool.getSocket();
-            try {
-                HashMap<InetAddress, ArrayList<Integer>> servers = getServers();
-                // Initiate worker
-                FSChunkWorker worker = new FSChunkWorker(socket, file, servers);
-                byte[] fileChunk;
-                // Get number of packets that has the length equal of packetLength
-                for (int i = 0; i < packets; i++, offset += packetLength) {
-                    fileChunk = worker.getFile(offset, packetLength);
-                    System.arraycopy(fileChunk, 0, fileContent, fileContentSize, packetLength);
-                    fileContentSize += packetLength;
-                }
-                // Get Last packet that has not the same size of packetLength
-                if ((size % packetLength) != 0) {
-                    fileChunk = worker.getFile(offset, size - offset);
-                    System.arraycopy(fileChunk, 0, fileContent, fileContentSize, size - offset);
-                }
-            } finally {
-                // Release socket from pool
-                socketPool.releaseSocket(socket);
-            }
-        } catch (NoSuchFieldException e) {
+            // Different threads are created and run with the respective list of offsets to retrive from the server
+            launchChunkThreads(numThreads,offSetsForThreads,file,size,packetSize,last,fileContent,fileContentLock);
+        } catch (InterruptedException e) {
             System.out.println(e.getMessage());
         }
-        return fileContent;
+        // Final file content byte array
+        byte[] fileContentArray = new byte[size];
+        // Thread that collects the data retrieved from the past threads and order the various chunks
+        DataRetrieverThread dataRetrieverThread = new DataRetrieverThread(fileContentArray,fileContent,fileContentLock,packetSize,lastOffset);
+        dataRetrieverThread.start();
+        try {
+            dataRetrieverThread.join();
+        } catch (InterruptedException e) {
+            System.out.println(e.getMessage());
+        }
+        Timer.stop();
+        System.out.println(Timer.getTimeString());
+        return fileContentArray;
+    }
+
+    private void initializeOffsetsAndDataStructure(ArrayList<ArrayList<Integer>> offSetsForThreads,
+                                                   HashMap<Integer,MyPair<Condition,byte[]>> fileContent,
+                                                   ReentrantLock fileContentLock,
+                                                   int numThreads,
+                                                   int numEqualLengthPackets,
+                                                   int lastOffset) {
+        int pointer = 0;
+        for(int i = 0; i < numThreads; i++)
+            offSetsForThreads.add(new ArrayList<>());
+        // Populate offset matrix with the round robin algorithm
+        for(int i = 0; i < numEqualLengthPackets; i++) {
+            offSetsForThreads.get(pointer).add(i);
+            pointer = (pointer + 1) % numThreads;
+        }
+        // Add the different sized packet at the end if it exists
+        if(numEqualLengthPackets != lastOffset)
+            offSetsForThreads.get(0).add(lastOffset - 1);
+        for(int i = 0; i < lastOffset; i++) {
+            MyPair<Condition,byte[]> temporaryPair = new MyPair<>(fileContentLock.newCondition(),null);
+            fileContent.put(i,temporaryPair);
+        }
+    }
+
+    private void launchChunkThreads(int numThreads, ArrayList<ArrayList<Integer>> offSetsForThreads,
+                                      String file, int size, int packetSize, boolean last, Map<Integer,
+                                      MyPair<Condition,byte[]>> fileContent,
+                                      ReentrantLock fileContentLock) throws InterruptedException {
+        HashMap<InetAddress,ArrayList<Integer>> servers = getServers();
+        for (int i = 0; i < numThreads; i++) {
+            ChunkThread thread = new ChunkThread(offSetsForThreads.get(i),
+                    file,
+                    size,
+                    packetSize,
+                    i == 0 && last, // The different sized packet will always be put in the first thread, if it exists
+                    fileContent,
+                    fileContentLock,
+                    socketPool,
+                    servers
+            );
+            thread.start();
+        }
     }
 
     private HashMap<InetAddress,ArrayList<Integer>> getServers() {
