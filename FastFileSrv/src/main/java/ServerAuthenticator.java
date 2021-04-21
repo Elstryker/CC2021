@@ -24,9 +24,10 @@ public class ServerAuthenticator {
         3 - FastFileSrv encrypts it's secret using the public key and sends it to the HttpGw
         4 - HttpGw decrypts the secret and checks it against it's own secret. If it matches then it adds the FastFileSrv
             to the list of allowed servers
-        5 - HttpGw sends the auth response to the FastFileSrv: "Granted"/"Denied"
+        5 - HttpGw sends the auth response to the FastFileSrv. If the association was succesful, send the port number the srv socket is connected to, else sends 0
     */
-    public boolean authenticateServer() throws Exception {
+    // Returns the port number the socket is associated to on the HttpGw side
+    public int authenticateServer() throws Exception {
         /*
           Sends a byte to the HttpGw, it answers with it's public key encoded in bytes
          */
@@ -36,13 +37,14 @@ public class ServerAuthenticator {
 
         /*
          Sends the secret encrypted using the HttpGw's public key
+         The server answers with what port the socket is connected to (0 is auth failed)
          */
         String secret = "Plain text which need to be encrypted by Java RSA Encryption in ECB Model";
         byte[] encodedSecret = encrypt(secret, publicKey);
         byte[] authResponseBytes = exchangeData(encodedSecret);
-        String authResponse = new String(authResponseBytes, 0, authResponseBytes.length);
+        int portResponse = Integer.parseInt(new  String(authResponseBytes, 0, authResponseBytes.length));
 
-        return authResponse.equals("Granted");
+        return portResponse;
     }
 
     /*

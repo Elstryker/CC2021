@@ -42,7 +42,7 @@ public class ServerAssociationWorker implements Runnable{
        3 - FastFileSrv encrypts it's secret using the public key and sends it to the HttpGw
        4 - HttpGw decrypts the secret and checks it against it's own secret. If it matches then it adds the FastFileSrv
            to the list of allowed servers
-       5 - HttpGw sends the auth response to the FastFileSrv: "Granted"/"Denied"
+       5 - HttpGw sends the auth response to the FastFileSrv. If the association was succesful, send the port number the srv socket is connected to, else sends 0
    */
     @Override
     public void run(){
@@ -62,12 +62,13 @@ public class ServerAssociationWorker implements Runnable{
                 String decryptedSecret = decrypt(encodedSecretBytes, privateKey);
                 byte[] authFinalResponse;
                 if (decryptedSecret.equals(secret)) {
-                    authFinalResponse = "Granted".getBytes();
+                    // Send the port the socket is connected to
+                    authFinalResponse = String.valueOf(srvPort).getBytes();
                     saveServer(fastFileSrvAddress, srvPort);
                     // Confirmação por linha de comando
                     System.out.printf("Accepted server from Address: %s, from Port: %s%n\n",fastFileSrvAddress,srvPort);
                 } else {
-                     authFinalResponse = "Denied".getBytes();
+                     authFinalResponse = "0".getBytes();
                 }
                 DatagramPacket authFinalResponsePacket = new DatagramPacket(authFinalResponse, authFinalResponse.length,
                         fastFileSrvAddress, srvPort);
@@ -116,36 +117,6 @@ public class ServerAssociationWorker implements Runnable{
         return new String(decryptedTextArray);
     }
 
-
-    public void run2() {
-        while(true) {
-            try {
-                byte[] content = new byte[100];
-                DatagramPacket packet = new DatagramPacket(content, content.length);
-                accepterSocket.setSoTimeout(0);
-                // Aceita novo pedido
-                accepterSocket.receive(packet);
-                String request = new String(packet.getData(),0, packet.getLength());
-                if(request.equals("Quit")) {
-                    deleteServer(packet.getAddress(), packet.getPort());
-                    // Confirmação por linha de comando
-                    System.out.printf("Deleted server from Address: %s, from Port: %s%n\n",packet.getAddress(),packet.getPort());
-                }
-                else {
-                    saveServer(packet.getAddress(), packet.getPort());
-                    // Confirmação por linha de comando
-                    System.out.printf("Accepted server from Address: %s, from Port: %s%n\n",packet.getAddress(),packet.getPort());
-                }
-                packet = new DatagramPacket(content, content.length, InetAddress.getByName("localhost"), packet.getPort());
-                accepterSocket.send(packet);
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            }
-        }
-    }
-
-
-
     private void saveServer(InetAddress address, int port) {
         try {
             serversLock.lock();
@@ -158,21 +129,6 @@ public class ServerAssociationWorker implements Runnable{
                 ports.add(port);
                 servers.put(address,ports);
             }
-        } finally {
-            serversLock.unlock();
-        }
-    }
-
-    private void deleteServer(InetAddress address, int port) {
-        try {
-            serversLock.lock();
-            // Remove server form the structure
-            ArrayList<Integer> ports = servers.get(address);
-            if(ports.size() > 1) {
-                ports.remove((Integer) port);
-            }
-            else
-                servers.remove(address);
         } finally {
             serversLock.unlock();
         }

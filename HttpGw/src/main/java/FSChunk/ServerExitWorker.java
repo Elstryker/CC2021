@@ -29,18 +29,24 @@ public class ServerExitWorker implements Runnable {
         while (true) {
             try {
                 // Receive exit request
-                DatagramPacket exitRequest = new DatagramPacket(new byte[1], 1);
-                accepterSocket.receive(exitRequest);
-                InetAddress srvAddress = exitRequest.getAddress();
-                int srvPort = exitRequest.getPort();
+                byte[] exitRequest = new byte[10];
+                DatagramPacket exitRequestPacket = new DatagramPacket(exitRequest, exitRequest.length);
+                accepterSocket.receive(exitRequestPacket);
+
+                byte[] portNumber = new byte[exitRequestPacket.getLength()];
+                System.arraycopy(exitRequestPacket.getData(), 0, portNumber, 0, exitRequestPacket.getLength());
+
+                InetAddress srvAddress = exitRequestPacket.getAddress();
+                int srvPortFromRequest = exitRequestPacket.getPort();
+                // Can't use the port directly on the packet but the one that is sent in the message,
+                // since the exit request comes from a different socket
+                int srvPortToClose = Integer.parseInt(new  String(portNumber, 0, portNumber.length));
 
                 // Remove server from list of available servers
-                deleteServer(srvAddress, srvPort);
-
+                deleteServer(srvAddress, srvPortToClose);
                 DatagramPacket confirmation = new DatagramPacket(new byte[1], new byte[1].length,
-                        srvAddress, srvPort);
+                        srvAddress, srvPortFromRequest);
                 accepterSocket.send(confirmation);
-                System.out.printf("Deleted server from Address: %s, from Port: %s%n\n", exitRequest.getAddress(), exitRequest.getPort());
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -55,8 +61,10 @@ public class ServerExitWorker implements Runnable {
                 ArrayList<Integer> ports = servers.get(address);
                 if (ports.size() > 1) {
                     ports.remove((Integer) port);
-                } else {
+                    System.out.printf("Deleted server from Address: %s, from Port: %s%n\n", address, address);
+                } else if(ports.get(0).equals(port)){
                     servers.remove(address);
+                    System.out.printf("Deleted server from Address: %s, from Port: %s%n\n", address, address);
                 }
             }
         } finally {
