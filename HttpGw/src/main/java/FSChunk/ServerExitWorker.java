@@ -61,10 +61,10 @@ public class ServerExitWorker implements Runnable {
                 ArrayList<Integer> ports = servers.get(address);
                 if (ports.size() > 1) {
                     ports.remove((Integer) port);
-                    System.out.printf("Deleted server from Address: %s, from Port: %s%n\n", address, address);
+                    System.out.printf("Deleted server from Address: %s, from Port: %d%n\n", address, port);
                 } else if(ports.get(0).equals(port)){
                     servers.remove(address);
-                    System.out.printf("Deleted server from Address: %s, from Port: %s%n\n", address, address);
+                    System.out.printf("Deleted server from Address: %s, from Port: %d%n\n", address, port);
                 }
             }
         } finally {

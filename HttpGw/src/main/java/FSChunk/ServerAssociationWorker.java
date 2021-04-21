@@ -42,7 +42,7 @@ public class ServerAssociationWorker implements Runnable{
        3 - FastFileSrv encrypts it's secret using the public key and sends it to the HttpGw
        4 - HttpGw decrypts the secret and checks it against it's own secret. If it matches then it adds the FastFileSrv
            to the list of allowed servers
-       5 - HttpGw sends the auth response to the FastFileSrv. If the association was successful, send the port number the srv socket is connected to, else sends 0
+       5 - HttpGw sends the auth response to the FastFileSrv: "Granted"/"Denied"
    */
     @Override
     public void run(){
@@ -68,11 +68,11 @@ public class ServerAssociationWorker implements Runnable{
                 byte[] authFinalResponse;
                 if (decryptedSecret.equals(authSecret)) {
                     // Send the port the socket is connected to
-                    authFinalResponse = String.valueOf(srvPort).getBytes();
+                    authFinalResponse = "Granted".getBytes();
                     saveServer(fastFileSrvAddress, srvPort);
                     System.out.printf("Accepted server from Address: %s, from Port: %s%n\n",fastFileSrvAddress,srvPort);
                 } else {
-                     authFinalResponse = "0".getBytes();
+                     authFinalResponse = "Denied".getBytes();
                 }
 
                 // Send the port the socket is connected to, 0 if auth failed
@@ -95,10 +95,10 @@ public class ServerAssociationWorker implements Runnable{
                 DatagramPacket request = new DatagramPacket(data, data.length, address, port);
                 accepterSocket.send(request);
 
-                // waits for the server's answer a maximum of 2 second
-                accepterSocket.setSoTimeout(2000);
                 byte[] buffer = new byte[5000];
                 DatagramPacket response = new DatagramPacket(buffer, buffer.length);
+                // waits for the server's answer a maximum of 2 second
+                accepterSocket.setSoTimeout(2000);
                 accepterSocket.receive(response);
                 accepterSocket.setSoTimeout(0);
 
@@ -107,6 +107,7 @@ public class ServerAssociationWorker implements Runnable{
 
                 return responseBytes;
             } catch (IOException e) { // Includes SocketTimeoutException
+                accepterSocket.setSoTimeout(0);
                 timeoutCounter++;
             }
         }

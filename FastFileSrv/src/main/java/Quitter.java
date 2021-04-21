@@ -39,12 +39,13 @@ class Quitter implements Runnable{
                 exitRequestSocket.send(packet);
                 byte[] waiter = new byte[1];
                 packet = new DatagramPacket(waiter, waiter.length);
-                exitRequestSocket.setSoTimeout(3000);
+                exitRequestSocket.setSoTimeout(2000);
                 exitRequestSocket.receive(packet);
                 exitRequestSocket.setSoTimeout(0);
                 processCompleted = true;
                 System.out.println("Exit process complete");
             } catch (IOException e) {
+                exitRequestSocket.setSoTimeout(0);
                 e.printStackTrace();
             }
         }

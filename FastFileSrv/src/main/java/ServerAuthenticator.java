@@ -26,10 +26,10 @@ public class ServerAuthenticator {
         3 - FastFileSrv encrypts it's secret using the public key and sends it to the HttpGw
         4 - HttpGw decrypts the secret and checks it against it's own secret. If it matches then it adds the FastFileSrv
             to the list of allowed servers
-        5 - HttpGw sends the auth response to the FastFileSrv. If the association was succesful, send the port number the srv socket is connected to, else sends 0
+        5 - HttpGw sends the auth response to the FastFileSrv: "Granted"/"Denied"
     */
     // Returns the port number the socket is associated to on the HttpGw side, if 0 then auth has failed
-    public int authenticateServer() {
+    public boolean authenticateServer() {
         try {
             /*
               Sends a byte to the HttpGw, it answers with it's public key encoded in bytes
@@ -48,19 +48,19 @@ public class ServerAuthenticator {
             String authSecret = dotenv.get("AUTH_SECRET");
 
             byte[] encodedSecret = encrypt(authSecret, publicKey);
-            byte[] associatedPort = exchangeData(encodedSecret);
+            byte[] authResponse = exchangeData(encodedSecret);
 
-            return Integer.parseInt(new String(associatedPort, 0, associatedPort.length));
+            return (new String(authResponse, 0, authResponse.length)).equals("Granted");
         } catch (Exception e){
             System.out.println("Auth failed in an exception");
-            return  0;
+            return  false;
         }
     }
 
     /*
         Method responsible for sending an UDP packet with the provided data and waiting the the HttpGw's answer
      */
-    public byte[] exchangeData(byte[] data) throws SocketTimeoutException {
+    public byte[] exchangeData(byte[] data) throws SocketTimeoutException, SocketException {
         int timeoutCounter=0;
 
         while (timeoutCounter < 3) {
@@ -80,10 +80,10 @@ public class ServerAuthenticator {
 
                 return responseBytes;
             } catch (IOException e) { // Includes SocketTimeoutException
+                socket.setSoTimeout(0);
                 timeoutCounter++;
             }
         }
-
         throw new SocketTimeoutException();
     }
 
