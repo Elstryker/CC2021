@@ -7,89 +7,36 @@ import Utils.Timer;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.*;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FSChunk {
     // List of available servers
-    private HashMap<InetAddress,ArrayList<Integer>> servers;
+    private final HashMap<InetAddress,ArrayList<Integer>> servers;
     // Lock for thread managing on servers structure
-    private ReentrantLock serversLock;
-    // Socket for accepter thread
-    private DatagramSocket accepterSocket;
+    private final ReentrantLock serversLock;
     // Socket Pool
-    private SocketPool socketPool;
+    private final SocketPool socketPool;
 
 
     public FSChunk() throws SocketException {
         servers = new HashMap<>();
-        accepterSocket = new DatagramSocket(12345);
         serversLock = new ReentrantLock();
         socketPool = new SocketPool(1000);
     }
 
-    public void start() {
-        new Thread(this::accepterWorkFlow).start();
-    }
+    public void start() throws SocketException, NoSuchAlgorithmException {
+        // Starts thread responsible for listening to auth requests
+        new Thread(
+                new ServerAssociationWorker(servers, serversLock)
+        ).start();
 
-    private void accepterWorkFlow() {
-        while(true) {
-            try {
-                byte[] content = new byte[100];
-                DatagramPacket packet = new DatagramPacket(content, content.length);
-                accepterSocket.setSoTimeout(0);
-                // Aceita novo pedido
-                accepterSocket.receive(packet);
-                String request = new String(packet.getData(),0, packet.getLength());
-                if(request.equals("quit")) {
-                    deleteServer(packet.getAddress(), packet.getPort());
-                    // Confirmação por linha de comando
-                    System.out.printf("Deleted server from Address: %s, from Port: %s%n\n",packet.getAddress(),packet.getPort());
-                }
-                else {
-                    saveServer(packet.getAddress(), packet.getPort());
-                    // Confirmação por linha de comando
-                    System.out.printf("Accepted server from Address: %s, from Port: %s%n\n",packet.getAddress(),packet.getPort());
-                }
-                packet = new DatagramPacket(content, content.length, InetAddress.getByName("localhost"), packet.getPort());
-                accepterSocket.send(packet);
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            }
-        }
-    }
-
-    private void saveServer(InetAddress address, int port) {
-        try {
-            serversLock.lock();
-            // Save the new available server
-            ArrayList<Integer> ports = servers.get(address);
-            if (ports != null)
-                ports.add(port);
-            else {
-                ports = new ArrayList<>();
-                ports.add(port);
-                servers.put(address,ports);
-            }
-        } finally {
-            serversLock.unlock();
-        }
-    }
-
-    private void deleteServer(InetAddress address, int port) {
-        try {
-            serversLock.lock();
-            // Remove server form the structure
-            ArrayList<Integer> ports = servers.get(address);
-            if(ports.size() > 1) {
-                ports.remove((Integer) port);
-            }
-            else
-                servers.remove(address);
-        } finally {
-            serversLock.unlock();
-        }
+        // Starts thread responsible for listening to exit requests
+        new Thread(
+                new ServerExitWorker(servers, serversLock)
+        ).start();
     }
 
     /*

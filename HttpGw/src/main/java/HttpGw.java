@@ -9,11 +9,11 @@ import java.security.*;
 import io.github.cdimascio.dotenv.Dotenv;
 
 import ClientHandler.GatewayWorker;
-import FSChunk.FSChunk;
+import FSChunk.*;
 
 
 public class HttpGw {
-    public static void main( String[] args ) throws SocketException {
+    public static void main( String[] args ) throws SocketException, NoSuchAlgorithmException {
         FSChunk protocol = new FSChunk();
         protocol.start();
 
