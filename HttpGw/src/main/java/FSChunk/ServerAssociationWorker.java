@@ -1,5 +1,7 @@
 package FSChunk;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 import javax.crypto.Cipher;
 import java.io.IOException;
 import java.net.*;
@@ -18,8 +20,6 @@ public class ServerAssociationWorker implements Runnable{
     // Public-private key pair for auth secret encryption
     private final PublicKey publicKey;
     private final PrivateKey privateKey;
-
-    String secret = "Plain text which need to be encrypted by Java RSA Encryption in ECB Model";
 
     public ServerAssociationWorker(HashMap<InetAddress,ArrayList<Integer>> servers,
                                    ReentrantLock serversLock) throws SocketException, NoSuchAlgorithmException {
@@ -46,6 +46,10 @@ public class ServerAssociationWorker implements Runnable{
    */
     @Override
     public void run(){
+        Dotenv dotenv = Dotenv.configure()
+                .directory("src/main/security")
+                .load();
+        String authSecret = dotenv.get("AUTH_SECRET");
         while(true) {
             try {
                 /// Receive the auth request
@@ -61,7 +65,7 @@ public class ServerAssociationWorker implements Runnable{
                 /// Decrypt secret and check it against the HttpGw secret
                 String decryptedSecret = decrypt(encodedSecretBytes, privateKey);
                 byte[] authFinalResponse;
-                if (decryptedSecret.equals(secret)) {
+                if (decryptedSecret.equals(authSecret)) {
                     // Send the port the socket is connected to
                     authFinalResponse = String.valueOf(srvPort).getBytes();
                     saveServer(fastFileSrvAddress, srvPort);

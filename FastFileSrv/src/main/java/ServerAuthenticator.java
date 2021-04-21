@@ -4,7 +4,9 @@ import java.net.*;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
-// TODO: QUITTER
+import io.github.cdimascio.dotenv.Dotenv;
+
+
 public class ServerAuthenticator {
     DatagramSocket socket;
     String hostname = "localhost";
@@ -39,12 +41,15 @@ public class ServerAuthenticator {
          Sends the secret encrypted using the HttpGw's public key
          The server answers with what port the socket is connected to (0 is auth failed)
          */
-        String secret = "Plain text which need to be encrypted by Java RSA Encryption in ECB Model";
-        byte[] encodedSecret = encrypt(secret, publicKey);
-        byte[] authResponseBytes = exchangeData(encodedSecret);
-        int portResponse = Integer.parseInt(new  String(authResponseBytes, 0, authResponseBytes.length));
+        Dotenv dotenv = Dotenv.configure()
+                .directory("src/main/security")
+                .load();
+        String authSecret = dotenv.get("AUTH_SECRET");
 
-        return portResponse;
+        byte[] encodedSecret = encrypt(authSecret, publicKey);
+        byte[] associatedPort = exchangeData(encodedSecret);
+
+        return Integer.parseInt(new  String(associatedPort, 0, associatedPort.length));
     }
 
     /*
