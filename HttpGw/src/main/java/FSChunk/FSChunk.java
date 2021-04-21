@@ -14,11 +14,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class FSChunk {
     // List of available servers
-    private HashMap<InetAddress,ArrayList<Integer>> servers;
+    private final HashMap<InetAddress,ArrayList<Integer>> servers;
     // Lock for thread managing on servers structure
-    private ReentrantLock serversLock;
+    private final ReentrantLock serversLock;
     // Socket Pool
-    private SocketPool socketPool;
+    private final SocketPool socketPool;
 
 
     public FSChunk() throws SocketException {
@@ -28,10 +28,12 @@ public class FSChunk {
     }
 
     public void start() throws SocketException, NoSuchAlgorithmException {
+        // Starts thread responsible for listening to auth requests
         new Thread(
                 new ServerAssociationWorker(servers, serversLock)
         ).start();
 
+        // Starts thread responsible for listening to exit requests
         new Thread(
                 new ServerExitWorker(servers, serversLock)
         ).start();

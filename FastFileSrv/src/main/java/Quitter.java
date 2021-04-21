@@ -4,11 +4,10 @@ import java.util.Scanner;
 
 class Quitter implements Runnable{
 
-    private final DatagramSocket socketInUse;
+    // Port to which the main socket is associated to on the httpGw side
     private final int socketPort;
 
-    public Quitter(DatagramSocket socketInUse, int socketPort){
-         this.socketInUse = socketInUse;
+    public Quitter(int socketPort){
          this.socketPort = socketPort;
     }
     public void run() {

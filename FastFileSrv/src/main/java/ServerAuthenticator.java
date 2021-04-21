@@ -49,8 +49,8 @@ public class ServerAuthenticator {
 
             byte[] encodedSecret = encrypt(authSecret, publicKey);
             byte[] associatedPort = exchangeData(encodedSecret);
-            return Integer.parseInt(new String(associatedPort, 0, associatedPort.length));
 
+            return Integer.parseInt(new String(associatedPort, 0, associatedPort.length));
         } catch (Exception e){
             System.out.println("Auth failed in an exception");
             return  0;
