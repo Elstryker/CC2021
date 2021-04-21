@@ -28,43 +28,50 @@ public class ServerAuthenticator {
             to the list of allowed servers
         5 - HttpGw sends the auth response to the FastFileSrv. If the association was succesful, send the port number the srv socket is connected to, else sends 0
     */
-    // Returns the port number the socket is associated to on the HttpGw side
-    public int authenticateServer() throws Exception {
-        /*
-          Sends a byte to the HttpGw, it answers with it's public key encoded in bytes
-         */
-        byte[] encodedKey = exchangeData(new byte[1]);
-        KeyFactory kf = KeyFactory.getInstance("RSA");
-        PublicKey publicKey = kf.generatePublic(new X509EncodedKeySpec(encodedKey));
+    // Returns the port number the socket is associated to on the HttpGw side, if 0 then auth has failed
+    public int authenticateServer() {
+        try {
+            /*
+              Sends a byte to the HttpGw, it answers with it's public key encoded in bytes
+             */
+            byte[] encodedKey = exchangeData(new byte[1]);
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            PublicKey publicKey = kf.generatePublic(new X509EncodedKeySpec(encodedKey));
 
-        /*
-         Sends the secret encrypted using the HttpGw's public key
-         The server answers with what port the socket is connected to (0 is auth failed)
-         */
-        Dotenv dotenv = Dotenv.configure()
-                .directory("src/main/security")
-                .load();
-        String authSecret = dotenv.get("AUTH_SECRET");
+            /*
+             Sends the secret encrypted using the HttpGw's public key
+             The server answers with what port the socket is connected to (0 is auth failed)
+             */
+            Dotenv dotenv = Dotenv.configure()
+                    .directory("src/main/security")
+                    .load();
+            String authSecret = dotenv.get("AUTH_SECRET");
 
-        byte[] encodedSecret = encrypt(authSecret, publicKey);
-        byte[] associatedPort = exchangeData(encodedSecret);
+            byte[] encodedSecret = encrypt(authSecret, publicKey);
+            byte[] associatedPort = exchangeData(encodedSecret);
+            return Integer.parseInt(new String(associatedPort, 0, associatedPort.length));
 
-        return Integer.parseInt(new  String(associatedPort, 0, associatedPort.length));
+        } catch (Exception e){
+            System.out.println("Auth failed in an exception");
+            return  0;
+        }
     }
 
     /*
         Method responsible for sending an UDP packet with the provided data and waiting the the HttpGw's answer
      */
-    public byte[] exchangeData(byte[] data) throws IOException {
-        while (true) {
+    public byte[] exchangeData(byte[] data) throws SocketTimeoutException {
+        int timeoutCounter=0;
+
+        while (timeoutCounter < 3) {
             try {
                 DatagramPacket request = new DatagramPacket(data, data.length, address, port);
                 socket.send(request);
 
                 // waits for the server's answer a maximum of 2 second
-                socket.setSoTimeout(2000);
                 byte[] buffer = new byte[5000];
                 DatagramPacket response = new DatagramPacket(buffer, buffer.length);
+                socket.setSoTimeout(2000);
                 socket.receive(response);
                 socket.setSoTimeout(0);
 
@@ -72,10 +79,12 @@ public class ServerAuthenticator {
                 System.arraycopy(response.getData(), 0, responseBytes, 0, response.getLength());
 
                 return responseBytes;
-            } catch (SocketTimeoutException e) {
-                e.printStackTrace();
+            } catch (IOException e) { // Includes SocketTimeoutException
+                timeoutCounter++;
             }
         }
+
+        throw new SocketTimeoutException();
     }
 
 

@@ -42,7 +42,7 @@ public class ServerAssociationWorker implements Runnable{
        3 - FastFileSrv encrypts it's secret using the public key and sends it to the HttpGw
        4 - HttpGw decrypts the secret and checks it against it's own secret. If it matches then it adds the FastFileSrv
            to the list of allowed servers
-       5 - HttpGw sends the auth response to the FastFileSrv. If the association was succesful, send the port number the srv socket is connected to, else sends 0
+       5 - HttpGw sends the auth response to the FastFileSrv. If the association was successful, send the port number the srv socket is connected to, else sends 0
    */
     @Override
     public void run(){
@@ -50,6 +50,7 @@ public class ServerAssociationWorker implements Runnable{
                 .directory("src/main/security")
                 .load();
         String authSecret = dotenv.get("AUTH_SECRET");
+
         while(true) {
             try {
                 /// Receive the auth request
@@ -69,16 +70,17 @@ public class ServerAssociationWorker implements Runnable{
                     // Send the port the socket is connected to
                     authFinalResponse = String.valueOf(srvPort).getBytes();
                     saveServer(fastFileSrvAddress, srvPort);
-                    // Confirmação por linha de comando
                     System.out.printf("Accepted server from Address: %s, from Port: %s%n\n",fastFileSrvAddress,srvPort);
                 } else {
                      authFinalResponse = "0".getBytes();
                 }
+
+                // Send the port the socket is connected to, 0 if auth failed
                 DatagramPacket authFinalResponsePacket = new DatagramPacket(authFinalResponse, authFinalResponse.length,
                         fastFileSrvAddress, srvPort);
                 accepterSocket.send(authFinalResponsePacket);
             } catch (Exception e){
-                e.printStackTrace();
+                System.out.println("A FastFileSrv but auth failed due to an exception on it's side");
             }
         }
     }
@@ -86,13 +88,15 @@ public class ServerAssociationWorker implements Runnable{
     /*
    Method responsible for sending an UDP packet with the provided data and waiting the the HttpGw's answer
 */
-    public byte[] exchangeData(byte[] data, InetAddress address, int port) throws IOException {
-        while(true){
+    public byte[] exchangeData(byte[] data, InetAddress address, int port) throws SocketTimeoutException, SocketException {
+        int timeoutCounter=0;
+        while (timeoutCounter<3) {
             try {
                 DatagramPacket request = new DatagramPacket(data, data.length, address, port);
                 accepterSocket.send(request);
 
-                accepterSocket.setSoTimeout(1000);
+                // waits for the server's answer a maximum of 2 second
+                accepterSocket.setSoTimeout(2000);
                 byte[] buffer = new byte[5000];
                 DatagramPacket response = new DatagramPacket(buffer, buffer.length);
                 accepterSocket.receive(response);
@@ -102,10 +106,12 @@ public class ServerAssociationWorker implements Runnable{
                 System.arraycopy(response.getData(), 0, responseBytes, 0, response.getLength());
 
                 return responseBytes;
-            } catch (SocketTimeoutException e){
-                e.printStackTrace();
+            } catch (IOException e) { // Includes SocketTimeoutException
+                timeoutCounter++;
             }
         }
+        accepterSocket.setSoTimeout(0);
+        throw new SocketTimeoutException();
     }
 
     public static String decrypt(byte[] cipherTextArray, PrivateKey privateKey) throws Exception

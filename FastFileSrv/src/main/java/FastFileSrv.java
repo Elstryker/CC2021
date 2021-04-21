@@ -6,7 +6,8 @@ import java.util.concurrent.Executors;
 public class FastFileSrv {
     private final DatagramSocket socket;
     private final ExecutorService threadPool;
-    // port to wich the datagram socket is connected to in the httpGw side. Must be known to send a quit request form another socket
+    // port to which the datagram socket is connected to in the httpGw side.
+    // Must be known to send a quit request form another socket.
     private int mainPort;
 
     public FastFileSrv() throws SocketException {
@@ -15,7 +16,7 @@ public class FastFileSrv {
         mainPort = 0;
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws IOException {
         FastFileSrv server = new FastFileSrv();
         System.out.println("Starting authentication");
 
@@ -30,7 +31,7 @@ public class FastFileSrv {
     /*
         Authenticates the server. If the auth was successful the port number must be != 0
      */
-    public boolean authenticate() throws Exception {
+    public boolean authenticate() throws UnknownHostException {
         ServerAuthenticator serverAuthenticator = new ServerAuthenticator(socket);
         this.mainPort = serverAuthenticator.authenticateServer();
         return this.mainPort!=0;
