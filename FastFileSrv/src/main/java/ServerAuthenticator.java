@@ -28,7 +28,6 @@ public class ServerAuthenticator {
             to the list of allowed servers
         5 - HttpGw sends the auth response to the FastFileSrv: "Granted"/"Denied"
     */
-    // Returns the port number the socket is associated to on the HttpGw side, if 0 then auth has failed
     public boolean authenticateServer() {
         try {
             /*

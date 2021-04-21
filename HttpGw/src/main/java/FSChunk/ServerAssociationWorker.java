@@ -67,7 +67,7 @@ public class ServerAssociationWorker implements Runnable{
                 String decryptedSecret = decrypt(encodedSecretBytes, privateKey);
                 byte[] authFinalResponse;
                 if (decryptedSecret.equals(authSecret)) {
-                    // Send the port the socket is connected to
+                    // Send the httpGW auth veredict
                     authFinalResponse = "Granted".getBytes();
                     saveServer(fastFileSrvAddress, srvPort);
                     System.out.printf("Accepted server from Address: %s, from Port: %s%n\n",fastFileSrvAddress,srvPort);
@@ -75,7 +75,6 @@ public class ServerAssociationWorker implements Runnable{
                      authFinalResponse = "Denied".getBytes();
                 }
 
-                // Send the port the socket is connected to, 0 if auth failed
                 DatagramPacket authFinalResponsePacket = new DatagramPacket(authFinalResponse, authFinalResponse.length,
                         fastFileSrvAddress, srvPort);
                 accepterSocket.send(authFinalResponsePacket);
