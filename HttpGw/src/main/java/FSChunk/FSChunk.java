@@ -137,13 +137,15 @@ public class FSChunk {
 
     private void getFile(OutputStream clientStream, String file, int size) {
         // Matrix that assigns a list of offsets to the respective thread
+        int basePacketMultiplier = 10;
         ArrayList<ArrayList<Integer>> offSetsForThreads = new ArrayList<>();
-        int numThreads = (size / (15 * 1024 * 1024)) + 1;
+        int numThreads = (size / (basePacketMultiplier * 1024 * 1024)) + 1;
         System.out.println("Number of threads: " + numThreads);
-        int packetSize = 1024 * 10;
+        int packetSize = 1024 * basePacketMultiplier;
         // Checking time to download the files
         Timer.start();
         int numEqualLengthPackets = size / packetSize;
+        System.out.println(numEqualLengthPackets);
         // Boolean to determine if the file needs a last packet that has not the same size and the others
         boolean last = size % packetSize != 0;
         int lastOffset;
@@ -159,6 +161,7 @@ public class FSChunk {
             lastOffset = numEqualLengthPackets;
         // Initialization of structures and population of offsets matrix
         initializeOffsetsAndDataStructure(offSetsForThreads,fileContent,fileContentLock,numThreads,numEqualLengthPackets,lastOffset);
+
         try {
             // Different threads are created and run with the respective list of offsets to retrive from the server
             launchChunkThreads(numThreads,offSetsForThreads,file,size,packetSize,last,fileContent,fileContentLock);
