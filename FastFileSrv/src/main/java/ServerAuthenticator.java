@@ -14,9 +14,13 @@ public class ServerAuthenticator {
     InetAddress address;
 
 
-    public ServerAuthenticator(DatagramSocket socket) throws UnknownHostException {
+    public ServerAuthenticator(DatagramSocket socket,String listener) throws UnknownHostException {
         this.socket = socket;
-        this.address = InetAddress.getByName(hostname);
+        if(listener!= null){
+            this.address = InetAddress.getByName(listener);
+        }else {
+            this.address = InetAddress.getByName (hostname);
+        }
     }
 
     /*

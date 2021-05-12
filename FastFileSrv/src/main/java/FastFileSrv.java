@@ -5,6 +5,7 @@ import java.util.concurrent.Executors;
 
 public class FastFileSrv {
     private final DatagramSocket socket;
+    private static String listener;
     private final ExecutorService threadPool;
 
     public FastFileSrv() throws SocketException {
@@ -13,6 +14,10 @@ public class FastFileSrv {
     }
 
     public static void main(String[] args) throws IOException {
+        if(args[1]!=null && args[0]!= null){
+            System.out.println ("Will wait for "+args[1]);
+            listener = args[1];
+        }
         FastFileSrv server = new FastFileSrv();
         System.out.println("Starting authentication");
 
@@ -28,7 +33,7 @@ public class FastFileSrv {
         Authenticates the server. If the auth was successful the port number must be != 0
      */
     public boolean authenticate() throws UnknownHostException {
-        ServerAuthenticator serverAuthenticator = new ServerAuthenticator(socket);
+        ServerAuthenticator serverAuthenticator = new ServerAuthenticator(socket,listener);
         return serverAuthenticator.authenticateServer();
     }
 
