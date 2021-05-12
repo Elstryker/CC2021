@@ -135,21 +135,21 @@ public class FSChunk {
         return new MyPair<>(serverAddress,destPort);
     }
 
-    private void getFile(OutputStream clientStream, String file, int size) {
+    private void getFile(OutputStream clientStream, String file, long size) {
         // Matrix that assigns a list of offsets to the respective thread
         int basePacketMultiplier = 10;
         ArrayList<ArrayList<Integer>> offSetsForThreads = new ArrayList<>();
-        int numThreads = (size / (basePacketMultiplier * 1024 * 1024)) + 1;
+        int numThreads = (int) ((size / (basePacketMultiplier * 1024 * 1024)) + 1);
         System.out.println("Number of threads: " + numThreads);
         int packetSize = 1024 * basePacketMultiplier;
         // Checking time to download the files
         Timer.start();
-        int numEqualLengthPackets = size / packetSize;
+        int numEqualLengthPackets = (int) (size / packetSize);
         System.out.println(numEqualLengthPackets);
         // Boolean to determine if the file needs a last packet that has not the same size and the others
         boolean last = size % packetSize != 0;
         int lastOffset;
-        // Structure that maps offset packet to the corresponding bytes of the file
+        // Structure that maps offset's indices to the corresponding bytes of the file
         // It has a condition so the thread collecting the data can sleep on it if the data hasn't been retrieved yet
         HashMap<Integer,MyPair<Condition,byte[]>> fileContent = new HashMap<>();
         ReentrantLock fileContentLock = new ReentrantLock();
@@ -205,7 +205,7 @@ public class FSChunk {
     }
 
     private void launchChunkThreads(int numThreads, ArrayList<ArrayList<Integer>> offSetsForThreads,
-                                      String file, int size, int packetSize, boolean last, Map<Integer,
+                                      String file, long size, int packetSize, boolean last, Map<Integer,
                                       MyPair<Condition,byte[]>> fileContent,
                                       ReentrantLock fileContentLock) throws InterruptedException {
         HashMap<InetAddress,ArrayList<Integer>> servers = getServers();

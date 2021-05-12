@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 public class MessageData {
     private final String type;
-    private int offset;
+    private long offset;
     private int size;
     private String fileName;
 
@@ -21,7 +21,7 @@ public class MessageData {
             fileName = tokens[1];
         }
         else {
-            offset = Integer.parseInt(tokens[1]);
+            offset = Long.parseLong(tokens[1]);
             size = Integer.parseInt(tokens[2]);
             fileName = tokens[3];
             // Filtering invalid positions or names

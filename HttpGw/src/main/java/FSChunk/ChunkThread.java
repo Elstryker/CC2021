@@ -14,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ChunkThread extends Thread {
     private ArrayList<Integer> offsets;
     private String fileName;
-    private int fileSize;
+    private long fileSize;
     private int packetSize;
     private boolean last;
     private Map<Integer, MyPair<Condition,byte[]>> responseStruct;
@@ -24,7 +24,7 @@ public class ChunkThread extends Thread {
 
     public ChunkThread(ArrayList<Integer> offsets,
                        String fileName,
-                       int fileSize,
+                       long fileSize,
                        int packetSize,
                        boolean last,
                        Map<Integer, MyPair<Condition,byte[]>> responseStruct,
@@ -67,7 +67,7 @@ public class ChunkThread extends Thread {
         // Capture last different length packet, if this thread has one
         if(last) {
             int lastOffset = offsets.get(offsets.size()-1);
-            int lastPacketSize = fileSize - lastOffset * packetSize;
+            int lastPacketSize = (int) (fileSize - lastOffset * packetSize);
             try {
                 fileChunk = worker.getFile(lastOffset * packetSize,lastPacketSize);
                 arrayLock.lock();
