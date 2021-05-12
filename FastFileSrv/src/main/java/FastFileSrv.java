@@ -14,9 +14,13 @@ public class FastFileSrv {
     }
 
     public static void main(String[] args) throws IOException {
-        if(args[1]!=null && args[0]!= null){
-            System.out.println ("Will wait for "+args[1]);
-            listener = args[1];
+        if(args.length!=0) {
+            if (args[1] != null && args[0] != null) {
+                System.out.println("Will wait for " + args[1]);
+                listener = args[1];
+            }
+        }else {
+            listener = "localhost";
         }
         FastFileSrv server = new FastFileSrv();
         System.out.println("Starting authentication");
