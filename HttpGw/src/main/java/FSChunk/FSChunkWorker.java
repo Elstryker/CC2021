@@ -34,17 +34,19 @@ public class FSChunkWorker {
     public FileMetaData getMetaData() throws NoSuchFieldException {
         if (this.file.equals(""))
             throw new NoSuchFieldException("No file especified");
-        byte[] dataRequested = this.requestData(("INFO " + this.file).getBytes(), 5000); // Random value bigger than the occupied by the metadata
+        byte[] dataRequested = this.requestData("INFO " + this.file,("INFO " + this.file).getBytes(), 5000); // Random value bigger than the occupied by the metadata
         return new FileMetaData(new String(dataRequested));
     }
 
-    public byte[] getFile(int offset, int size) throws NoSuchFieldException {
+    public byte[] getFile(long offset, int size) throws NoSuchFieldException {
         if (this.file.equals(""))
             throw new NoSuchFieldException("No file specified");
-        return requestData((String.format("GET %d %d %s",offset,size,this.file)).getBytes(), size);
+        String request = (String.format("GET %d %d %s",offset,size,this.file));
+        //System.out.println(request);
+        return requestData(request,(String.format("GET %d %d %s",offset,size,this.file)).getBytes(), size);
     }
 
-    private byte[] requestData(byte[] message, int packetSize) {
+    private byte[] requestData(String request, byte[] message, int packetSize) {
         boolean authCompleted = false;
         byte[] receivedBytes = new byte[packetSize];
         DatagramPacket receivePacket = null, sendPacket;
@@ -76,6 +78,7 @@ public class FSChunkWorker {
                 authCompleted = true;
             } catch (IOException e) {
                 System.out.println(e.getMessage());
+                System.out.println("Failed on: " + request);
             }
         }
         // Get only useful info from the received buffer packet

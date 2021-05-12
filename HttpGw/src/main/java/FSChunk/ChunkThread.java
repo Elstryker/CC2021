@@ -53,7 +53,7 @@ public class ChunkThread extends Thread {
         // Capture same length packets
         for(int i = 0; i < equalPackets;i++) {
             try {
-                fileChunk = worker.getFile(offsets.get(i) * packetSize,packetSize);
+                fileChunk = worker.getFile((long) offsets.get(i) * packetSize,packetSize);
                 arrayLock.lock();
                 responseStruct.get(offsets.get(i)).setSecond(fileChunk);
                 // Wakes up the retriever thread
@@ -69,7 +69,7 @@ public class ChunkThread extends Thread {
             int lastOffset = offsets.get(offsets.size()-1);
             int lastPacketSize = (int) (fileSize - lastOffset * packetSize);
             try {
-                fileChunk = worker.getFile(lastOffset * packetSize,lastPacketSize);
+                fileChunk = worker.getFile((long) lastOffset * packetSize,lastPacketSize);
                 arrayLock.lock();
                 responseStruct.get(lastOffset).setSecond(fileChunk);
                 // Wakes up the retriever thread

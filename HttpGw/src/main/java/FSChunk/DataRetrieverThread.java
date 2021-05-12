@@ -35,6 +35,7 @@ public class DataRetrieverThread extends Thread {
                     conditionContentPair.getFirst().await();
                 }
 
+                fileContent.remove(i); // Removes entry from structure to free up space
                 byte[] content = conditionContentPair.getSecond();
                 byte[] hexSizeBytes = (Integer.toHexString(content.length) + "\n").getBytes();
                 byte[] chunk = new byte[hexSizeBytes.length + content.length + "\n".getBytes().length];
