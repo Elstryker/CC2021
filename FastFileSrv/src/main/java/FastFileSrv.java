@@ -47,12 +47,12 @@ public class FastFileSrv {
         Runnable quitter = new Quitter(socket.getLocalPort());
         threadPool.execute(quitter);
         while (true) {
-            Runnable requester = new RequestHandler(socket);
+            Runnable requestHandler = new RequestHandler(socket);
             /*
              * Use thread pool to allocate idle threads for processing
              * Currently connected client
              */
-            threadPool.execute(requester);
+            threadPool.execute(requestHandler);
         }
     }
 }

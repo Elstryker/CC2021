@@ -67,7 +67,7 @@ public class ServerAssociationWorker implements Runnable{
                 String decryptedSecret = decrypt(encodedSecretBytes, privateKey);
                 byte[] authFinalResponse;
                 if (decryptedSecret.equals(authSecret)) {
-                    // Send the httpGW auth veredict
+                    // Send the httpGW auth verdict
                     authFinalResponse = "Granted".getBytes();
                     saveServer(fastFileSrvAddress, srvPort);
                     System.out.printf("Accepted server from Address: %s, from Port: %s%n\n",fastFileSrvAddress,srvPort);

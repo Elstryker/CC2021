@@ -4,7 +4,6 @@ import Utils.MyPair;
 import Utils.SocketPool;
 import Utils.Timer;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.*;
@@ -42,10 +41,14 @@ public class FSChunk {
 
 
 
-    /*
-    Info file  :  EXISTS:true,SIZE:500,TYPE:type | EXISTS:false
+    /* Possible Requests
+    Info file  -> answer:  EXISTS:true,SIZE:XYZ,TYPE:type | EXISTS:false
     Get offset size file
     */
+
+    /*
+     Asks a server for the file metadata, then calls an aux function responsible for sending the file (or an placeholder in case the file is missing)
+     */
     public void retrieveAndSendFile(OutputStream clientOutputStream, String filename)  throws IOException {
         DatagramSocket socket = socketPool.getSocket();
         // Get Random Server to fetch files
@@ -59,7 +62,7 @@ public class FSChunk {
         retrieveAndSendFileAux(clientOutputStream, filename, fileMetaData);
     }
 
-    /*
+    /* Typical chunked response
     version status code
     headers
     (empty line)
@@ -72,6 +75,11 @@ public class FSChunk {
     0\n
     \n
     */
+
+    /*
+    Given file metadata, send a placeholder if the file is missing. If it exists, writes the file in chunks to the client socket.
+    */
+
     private void retrieveAndSendFileAux(OutputStream clientOutput, String  filename, FileMetaData fileMetaData) throws  IOException{
         String status;
         String contentType;
@@ -103,7 +111,7 @@ public class FSChunk {
             System.arraycopy("\n".getBytes(), 0, chunk, hexSizeBytes.length + content.length, "\n".getBytes().length);
             clientOutput.write(chunk);
         } else{
-            getFile(clientOutput, filename, fileMetaData.getSize());
+            writeChunkedFile(clientOutput, filename, fileMetaData.getSize());
         }
         clientOutput.flush();
 
@@ -135,7 +143,10 @@ public class FSChunk {
         return new MyPair<>(serverAddress,destPort);
     }
 
-    private void getFile(OutputStream clientStream, String file, long size) {
+    /*
+    Launches a number of threads responsible for asking parts of the file to multiple servers
+     */
+    private void writeChunkedFile(OutputStream clientStream, String file, long size) {
         // Matrix that assigns a list of offsets to the respective thread
         int basePacketMultiplier = 10;
         ArrayList<ArrayList<Integer>> offSetsForThreads = new ArrayList<>();

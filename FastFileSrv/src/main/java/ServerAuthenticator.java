@@ -43,7 +43,7 @@ public class ServerAuthenticator {
 
             /*
              Sends the secret encrypted using the HttpGw's public key
-             The server answers with the auth veredict)
+             The server answers with the auth verdict
              */
             Dotenv dotenv = Dotenv.configure()
                     .directory("src/main/security")

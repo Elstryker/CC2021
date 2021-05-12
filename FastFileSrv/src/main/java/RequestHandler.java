@@ -33,8 +33,6 @@ class RequestHandler implements Runnable{
                 processMetaData();
             else if(message.getType().equals("GET"))
                 processGetFile();
-            else
-                System.out.println("What");
         }catch(Exception e){
             System.out.println (e.getMessage());
         }
