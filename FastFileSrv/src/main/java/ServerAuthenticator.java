@@ -1,6 +1,7 @@
 import javax.crypto.Cipher;
 import java.io.IOException;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
@@ -16,8 +17,9 @@ public class ServerAuthenticator {
 
     public ServerAuthenticator(DatagramSocket socket,String listener) throws UnknownHostException {
         this.socket = socket;
+
         if(listener!= null){
-            this.address = InetAddress.getByName(listener);
+            this.address = InetAddress.getByName (listener);
         }else {
             this.address = InetAddress.getByName (hostname);
         }
@@ -55,7 +57,7 @@ public class ServerAuthenticator {
 
             return (new String(authResponse, 0, authResponse.length)).equals("Granted");
         } catch (Exception e){
-            System.out.println("Auth failed in an exception");
+            e.printStackTrace ();
             return  false;
         }
     }

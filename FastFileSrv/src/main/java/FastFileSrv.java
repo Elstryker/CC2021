@@ -14,18 +14,26 @@ public class FastFileSrv {
     }
 
     public static void main(String[] args) throws IOException {
-        if(args[1]!=null && args[0]!= null){
-            System.out.println ("Will wait for "+args[1]);
-            listener = args[1];
-        }
-        FastFileSrv server = new FastFileSrv();
-        System.out.println("Starting authentication");
 
-        if(server.authenticate()) {
-            System.out.println("Authentication complete");
-            server.service();
+        try {
+            if (args[0] != null) {
+                System.out.println ("Will wait for " + args[0]);
+                listener = args[0];
+            }
+        }catch (ArrayIndexOutOfBoundsException e) {
+            ;
+        }
+
+        FastFileSrv server = new FastFileSrv ();
+        System.out.println ("Starting authentication");
+
+        if (server.authenticate ()) {
+            System.out.println ("Authentication complete");
+            if(listener!=null)
+                System.out.println ("Listening "+listener);
+            server.service ();
         } else {
-            System.out.println("Authentication failed");
+            System.out.println ("Authentication failed");
         }
     }
 
