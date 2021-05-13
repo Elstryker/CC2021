@@ -48,7 +48,7 @@ hs_err_pid*
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
-
+.idea/artifacts
 # Gradle
 .idea/**/gradle.xml
 .idea/**/libraries
@@ -76,7 +76,7 @@ cmake-build-*/
 *.iws
 
 # IntelliJ
-out/
+# out/
 target/
 
 # mpeltonen/sbt-idea plugin
