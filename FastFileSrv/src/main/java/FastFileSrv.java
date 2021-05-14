@@ -15,13 +15,9 @@ public class FastFileSrv {
 
     public static void main(String[] args) throws IOException {
 
-        try {
-            if (args[0] != null) {
-                System.out.println ("Will wait for " + args[0]);
-                listener = args[0];
-            }
-        }catch (ArrayIndexOutOfBoundsException e) {
-            ;
+        if(args.length!=0) {
+            System.out.println ("Will wait for " + args[0]);
+            listener = args[0];
         }
 
         FastFileSrv server = new FastFileSrv ();
