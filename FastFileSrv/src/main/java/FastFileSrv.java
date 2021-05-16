@@ -22,14 +22,17 @@ public class FastFileSrv {
         }else {
             listener = "localhost";
         }
-        FastFileSrv server = new FastFileSrv();
-        System.out.println("Starting authentication");
 
-        if(server.authenticate()) {
-            System.out.println("Authentication complete");
-            server.service();
+        FastFileSrv server = new FastFileSrv ();
+        System.out.println ("Starting authentication");
+
+        if (server.authenticate ()) {
+            System.out.println ("Authentication complete");
+            if(listener!=null)
+                System.out.println ("Listening "+listener);
+            server.service ();
         } else {
-            System.out.println("Authentication failed");
+            System.out.println ("Authentication failed");
         }
     }
 
