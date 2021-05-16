@@ -99,7 +99,6 @@ public class FSChunk {
                     Transfer-Encoding: chunked
                         
                     """).getBytes());
-        clientOutput.flush();
 
         if(status.equals("404 Not Found")) {
             byte[] content = "<h1>Not found :(</h1>".getBytes();
@@ -113,7 +112,6 @@ public class FSChunk {
         } else{
             writeChunkedFile(clientOutput, filename, fileMetaData.getSize());
         }
-        clientOutput.flush();
 
         String response = "0\n\n";
         clientOutput.write(response.getBytes());
