@@ -8,19 +8,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class FSChunkWorker {
-    private DatagramSocket socket;
-    private String file;
-    private ArrayList<MyPair<InetAddress,Integer>> servers;
-    private int maxLength = 1050 * 5;
+    private final DatagramSocket socket;
+    private final String file;
+    private final ArrayList<MyPair<InetAddress,Integer>> servers;
     private int serverPointer;
-
-    public FSChunkWorker(DatagramSocket sock, InetAddress serverAddress, Integer serverPort) {
-        socket = sock;
-        this.servers = new ArrayList<>();
-        this.servers.add(new MyPair<>(serverAddress,serverPort));
-        this.file = "";
-        this.serverPointer = -1;
-    }
 
     public FSChunkWorker(DatagramSocket sock, String file, InetAddress serverAddress, Integer serverPort) {
         socket = sock;
@@ -40,33 +31,24 @@ public class FSChunkWorker {
         this.serverPointer = 0;
     }
 
-    public FileMetaData getMetaData(String file) {
-        this.file = file;
-        byte[] dataRequested = this.requestData(("INFO " + this.file).getBytes());
-        return new FileMetaData(new String(dataRequested));
-    }
-
     public FileMetaData getMetaData() throws NoSuchFieldException {
         if (this.file.equals(""))
             throw new NoSuchFieldException("No file especified");
-        byte[] dataRequested = this.requestData(("INFO " + this.file).getBytes());
+        byte[] dataRequested = this.requestData("INFO " + this.file,("INFO " + this.file).getBytes(), 5000); // Random value bigger than the occupied by the metadata
         return new FileMetaData(new String(dataRequested));
     }
 
-    public byte[] getFile(String file, int offset, int size) {
-        this.file = file;
-        return this.requestData((String.format("GET %d %d %s",offset,size,this.file)).getBytes());
-    }
-
-    public byte[] getFile(int offset, int size) throws NoSuchFieldException {
+    public byte[] getFile(long offset, int size) throws NoSuchFieldException {
         if (this.file.equals(""))
             throw new NoSuchFieldException("No file specified");
-        return this.requestData((String.format("GET %d %d %s",offset,size,this.file)).getBytes());
+        String request = (String.format("GET %d %d %s",offset,size,this.file));
+        //System.out.println(request);
+        return requestData(request,(String.format("GET %d %d %s",offset,size,this.file)).getBytes(), size);
     }
 
-    private byte[] requestData(byte[] message) {
+    private byte[] requestData(String request, byte[] message, int packetSize) {
         boolean authCompleted = false;
-        byte[] receivedBytes = new byte[maxLength];
+        byte[] receivedBytes = new byte[packetSize];
         DatagramPacket receivePacket = null, sendPacket;
         try {
             // Timeout will trigger when he waits 1 second and didn't receive any packet
@@ -96,6 +78,7 @@ public class FSChunkWorker {
                 authCompleted = true;
             } catch (IOException e) {
                 System.out.println(e.getMessage());
+                System.out.println("Failed on: " + request);
             }
         }
         // Get only useful info from the received buffer packet

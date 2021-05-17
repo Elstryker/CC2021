@@ -4,8 +4,8 @@ import Utils.MyPair;
 import Utils.SocketPool;
 import Utils.Timer;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -39,27 +39,86 @@ public class FSChunk {
         ).start();
     }
 
-    /*
-    Info file  :  EXISTS:true,SIZE:500,TYPE:type | EXISTS:false
+
+
+    /* Possible Requests
+    Info file  -> answer:  EXISTS:true,SIZE:XYZ,TYPE:type | EXISTS:false
     Get offset size file
     */
 
-    public MyPair<byte[],String> retrieveFile(String fileName) throws SocketException, FileNotFoundException {
+    /*
+     Asks a server for the file metadata, then calls an aux function responsible for sending the file (or an placeholder in case the file is missing)
+     */
+    public void retrieveAndSendFile(OutputStream clientOutputStream, String filename)  throws IOException {
         DatagramSocket socket = socketPool.getSocket();
         // Get Random Server to fetch files
         MyPair<InetAddress,Integer> server = getRandomServer();
         // Get MetaData Information
-        FileMetaData fileMetaData = getMetaData(socket, fileName, server.getFirst(), server.getSecond());
+        FileMetaData fileMetaData = getMetaData(socket, filename, server.getFirst(), server.getSecond());
         socketPool.releaseSocket(socket);
         // Debugging metaData information
         System.out.println("\n" + fileMetaData.toString() + "\n\n");
         // Get file from server if file exists, else throw exception
-        if(fileMetaData.fileExists()) {
-            byte[] fileContent = getFile(fileName,fileMetaData.getSize());
-            return new MyPair<>(fileContent,fileMetaData.getType());
-        }
-        else throw new FileNotFoundException("File Not Found");
+        retrieveAndSendFileAux(clientOutputStream, filename, fileMetaData);
     }
+
+    /* Typical chunked response
+    version status code
+    headers
+    (empty line)
+    5\n
+    Media\n
+    8\n
+    Services\n
+    4\n
+    Live\n
+    0\n
+    \n
+    */
+
+    /*
+    Given file metadata, send a placeholder if the file is missing. If it exists, writes the file in chunks to the client socket.
+    */
+
+    private void retrieveAndSendFileAux(OutputStream clientOutput, String  filename, FileMetaData fileMetaData) throws  IOException{
+        String status;
+        String contentType;
+        if(fileMetaData.fileExists()) {
+             status = "200 Ok";
+             contentType = fileMetaData.getType();
+        } else{
+             status = "404 Not Found";
+             contentType = "text/html";
+        }
+
+        clientOutput.write(("HTTP/1.1 " + status + "\n").getBytes());
+        clientOutput.write(("ContentType: " + contentType + "\n").getBytes());
+        if (!contentType.trim().equals("text/html"))
+            clientOutput.write(("Content-Disposition: attachment; filename=\"" + filename + "\"\n").getBytes());
+        clientOutput.write(("""
+                    Transfer-Encoding: chunked
+                        
+                    """).getBytes());
+
+        if(status.equals("404 Not Found")) {
+            byte[] content = "<h1>Not found :(</h1>".getBytes();
+            byte[] hexSizeBytes = (Integer.toHexString(content.length) + "\n").getBytes();
+            byte[] chunk = new byte[hexSizeBytes.length + content.length + "\n".getBytes().length];
+
+            System.arraycopy(hexSizeBytes, 0, chunk, 0, hexSizeBytes.length);
+            System.arraycopy(content, 0, chunk, hexSizeBytes.length, content.length);
+            System.arraycopy("\n".getBytes(), 0, chunk, hexSizeBytes.length + content.length, "\n".getBytes().length);
+            clientOutput.write(chunk);
+        } else{
+            writeChunkedFile(clientOutput, filename, fileMetaData.getSize());
+        }
+
+        String response = "0\n\n";
+        clientOutput.write(response.getBytes());
+        clientOutput.flush();
+    }
+
+
 
     private MyPair<InetAddress,Integer> getRandomServer() {
         InetAddress serverAddress;
@@ -82,19 +141,24 @@ public class FSChunk {
         return new MyPair<>(serverAddress,destPort);
     }
 
-    private byte[] getFile(String file, int size) {
+    /*
+    Launches a number of threads responsible for asking parts of the file to multiple servers
+     */
+    private void writeChunkedFile(OutputStream clientStream, String file, long size) {
         // Matrix that assigns a list of offsets to the respective thread
+        int basePacketMultiplier = 10;
         ArrayList<ArrayList<Integer>> offSetsForThreads = new ArrayList<>();
-        int numThreads = (size / (15 * 1024 * 1024)) + 1;
+        int numThreads = (int) ((size / (basePacketMultiplier * 1024 * 1024)) + 1);
         System.out.println("Number of threads: " + numThreads);
-        int packetSize = 1024 * 5;
+        int packetSize = 1024 * basePacketMultiplier;
         // Checking time to download the files
         Timer.start();
-        int numEqualLengthPackets = size / packetSize;
+        int numEqualLengthPackets = (int) (size / packetSize);
+        System.out.println(numEqualLengthPackets);
         // Boolean to determine if the file needs a last packet that has not the same size and the others
         boolean last = size % packetSize != 0;
         int lastOffset;
-        // Structure that maps offset packet to the corresponding bytes of the file
+        // Structure that maps offset's indices to the corresponding bytes of the file
         // It has a condition so the thread collecting the data can sleep on it if the data hasn't been retrieved yet
         HashMap<Integer,MyPair<Condition,byte[]>> fileContent = new HashMap<>();
         ReentrantLock fileContentLock = new ReentrantLock();
@@ -106,16 +170,16 @@ public class FSChunk {
             lastOffset = numEqualLengthPackets;
         // Initialization of structures and population of offsets matrix
         initializeOffsetsAndDataStructure(offSetsForThreads,fileContent,fileContentLock,numThreads,numEqualLengthPackets,lastOffset);
+
         try {
             // Different threads are created and run with the respective list of offsets to retrive from the server
             launchChunkThreads(numThreads,offSetsForThreads,file,size,packetSize,last,fileContent,fileContentLock);
         } catch (InterruptedException e) {
             System.out.println(e.getMessage());
         }
-        // Final file content byte array
-        byte[] fileContentArray = new byte[size];
-        // Thread that collects the data retrieved from the past threads and order the various chunks
-        DataRetrieverThread dataRetrieverThread = new DataRetrieverThread(fileContentArray,fileContent,fileContentLock,packetSize,lastOffset);
+
+        // Thread that collects the data retrieved from the past threads and sends them ordered through the given stream
+        DataRetrieverThread dataRetrieverThread = new DataRetrieverThread(clientStream,fileContent,fileContentLock,lastOffset);
         dataRetrieverThread.start();
         try {
             dataRetrieverThread.join();
@@ -124,7 +188,6 @@ public class FSChunk {
         }
         Timer.stop();
         System.out.println(Timer.getTimeString());
-        return fileContentArray;
     }
 
     private void initializeOffsetsAndDataStructure(ArrayList<ArrayList<Integer>> offSetsForThreads,
@@ -151,7 +214,7 @@ public class FSChunk {
     }
 
     private void launchChunkThreads(int numThreads, ArrayList<ArrayList<Integer>> offSetsForThreads,
-                                      String file, int size, int packetSize, boolean last, Map<Integer,
+                                      String file, long size, int packetSize, boolean last, Map<Integer,
                                       MyPair<Condition,byte[]>> fileContent,
                                       ReentrantLock fileContentLock) throws InterruptedException {
         HashMap<InetAddress,ArrayList<Integer>> servers = getServers();

@@ -45,7 +45,7 @@ public class ServerAuthenticator {
 
             /*
              Sends the secret encrypted using the HttpGw's public key
-             The server answers with what port the socket is connected to (0 is auth failed)
+             The server answers with the auth verdict
              */
             Dotenv dotenv = Dotenv.configure()
                     .directory("src/main/security")

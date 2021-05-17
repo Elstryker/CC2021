@@ -14,10 +14,13 @@ public class FastFileSrv {
     }
 
     public static void main(String[] args) throws IOException {
-
         if(args.length!=0) {
-            System.out.println ("Will wait for " + args[0]);
-            listener = args[0];
+            if (args[1] != null && args[0] != null) {
+                System.out.println("Will wait for " + args[1]);
+                listener = args[1];
+            }
+        }else {
+            listener = "localhost";
         }
 
         FastFileSrv server = new FastFileSrv ();
@@ -47,12 +50,12 @@ public class FastFileSrv {
         Runnable quitter = new Quitter(socket.getLocalPort());
         threadPool.execute(quitter);
         while (true) {
-            Runnable requester = new RequestHandler(socket);
+            Runnable requestHandler = new RequestHandler(socket);
             /*
              * Use thread pool to allocate idle threads for processing
              * Currently connected client
              */
-            threadPool.execute(requester);
+            threadPool.execute(requestHandler);
         }
     }
 }

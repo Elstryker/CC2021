@@ -2,26 +2,25 @@ package FSChunk;
 
 import Utils.MyPair;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class DataRetrieverThread extends Thread {
-    private byte[] fileContentArray;
+    private OutputStream clientStream;
     private HashMap<Integer, MyPair<Condition,byte[]>> fileContent;
     private ReentrantLock fileContentLock;
-    private int packetSize;
     private int numPackets;
 
-    public DataRetrieverThread(byte[] fileContentArray,
+    public DataRetrieverThread(OutputStream clientStream,
                                HashMap<Integer, MyPair<Condition,byte[]>> fileContent,
                                ReentrantLock fileContentLock,
-                               int packetSize,
                                int numPackets) {
-        this.fileContentArray = fileContentArray;
+        this.clientStream = clientStream;
         this.fileContent = fileContent;
         this.fileContentLock = fileContentLock;
-        this.packetSize = packetSize;
         this.numPackets = numPackets;
     }
 
@@ -29,15 +28,24 @@ public class DataRetrieverThread extends Thread {
     public void run() {
         try {
             fileContentLock.lock();
-            MyPair<Condition,byte[]> temporaryPair;
+            MyPair<Condition,byte[]> conditionContentPair;
             for (int i = 0; i < numPackets; i++) {
-                temporaryPair = fileContent.get(i);
-                while (temporaryPair.getSecond() == null) {
-                    temporaryPair.getFirst().await();
+                conditionContentPair = fileContent.get(i);
+                while (conditionContentPair.getSecond() == null) {
+                    conditionContentPair.getFirst().await();
                 }
-                System.arraycopy(temporaryPair.getSecond(), 0, fileContentArray, i * packetSize, temporaryPair.getSecond().length);
+
+                fileContent.remove(i); // Removes entry from structure to free up space
+                byte[] content = conditionContentPair.getSecond();
+                byte[] hexSizeBytes = (Integer.toHexString(content.length) + "\n").getBytes();
+                byte[] chunk = new byte[hexSizeBytes.length + content.length + "\n".getBytes().length];
+
+                System.arraycopy(hexSizeBytes, 0, chunk, 0, hexSizeBytes.length);
+                System.arraycopy(content, 0, chunk, hexSizeBytes.length, content.length);
+                System.arraycopy("\n".getBytes(), 0, chunk, hexSizeBytes.length + content.length, "\n".getBytes().length);
+                clientStream.write(chunk);
             }
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             System.out.println(e.getMessage());
         } finally {
             fileContentLock.unlock();

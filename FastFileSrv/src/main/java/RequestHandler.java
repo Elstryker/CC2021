@@ -27,7 +27,7 @@ class RequestHandler implements Runnable{
     }
 
     public void run() {
-        System.out.println("Request: " + command);
+        //System.out.println("Request: " + command);
         try{
             if(message.getType().equals("INFO"))
                 processMetaData();
@@ -59,6 +59,6 @@ class RequestHandler implements Runnable{
         response = new DatagramPacket(responder, responder.length, clientAddress, clientPort);
         socket.send(response);
 
-        System.out.println ("Packets sent");
+        //System.out.println ("Packets sent");
     }
 }
