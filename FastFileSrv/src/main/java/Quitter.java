@@ -6,9 +6,11 @@ class Quitter implements Runnable{
 
     // Port to which the main socket is associated to on the httpGw side
     private final int socketPort;
+    private final String listener;
 
-    public Quitter(int socketPort){
+    public Quitter(int socketPort,String listener){
          this.socketPort = socketPort;
+         this.listener = listener;
     }
     public void run() {
         Scanner input = new Scanner(System.in);
@@ -35,7 +37,7 @@ class Quitter implements Runnable{
 
         while(!processCompleted) {
             try {
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, InetAddress.getByName("localhost"), 54321);
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, InetAddress.getByName(listener), 54321);
                 exitRequestSocket.send(packet);
                 byte[] waiter = new byte[1];
                 packet = new DatagramPacket(waiter, waiter.length);

@@ -10,19 +10,13 @@ import io.github.cdimascio.dotenv.Dotenv;
 
 public class ServerAuthenticator {
     DatagramSocket socket;
-    String hostname = "localhost";
     int port = 12345;
     InetAddress address;
 
 
     public ServerAuthenticator(DatagramSocket socket,String listener) throws UnknownHostException {
         this.socket = socket;
-
-        if(listener!= null){
-            this.address = InetAddress.getByName (listener);
-        }else {
-            this.address = InetAddress.getByName (hostname);
-        }
+        this.address = InetAddress.getByName (listener);
     }
 
     /*
