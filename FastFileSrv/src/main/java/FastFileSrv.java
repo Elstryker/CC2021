@@ -47,7 +47,7 @@ public class FastFileSrv {
 
 
     private void service() throws IOException {
-        Runnable quitter = new Quitter(socket.getLocalPort());
+        Runnable quitter = new Quitter(socket.getLocalPort(),this.listener);
         threadPool.execute(quitter);
         while (true) {
             Runnable requestHandler = new RequestHandler(socket);
