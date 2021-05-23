@@ -51,11 +51,11 @@ public class ServerAssociationWorker implements Runnable{
                 .load();
         String authSecret = dotenv.get("AUTH_SECRET");
 
+        System.out.println ("Listening on port: 12345");
         while(true) {
             try {
                 /// Receive the auth request
                 DatagramPacket authRequest = new DatagramPacket(new byte[1], 1);
-                System.out.println ("Listening on port: 8080 ");
 
                 accepterSocket.receive(authRequest); //The receive() method blocks until a datagram is received. And the following code sends a DatagramPacket to the client:
                 InetAddress fastFileSrvAddress = authRequest.getAddress();

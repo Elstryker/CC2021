@@ -3,17 +3,17 @@ package Utils;
 import static java.lang.System.nanoTime;
 
 public class Timer {
-    private static long inicio = 0L;
-    private static long fim = 0L;
+    private static long beginning = 0L;
+    private static long end = 0L;
 
     public static void start() {
-        fim = 0L; inicio = nanoTime();
+        end = 0L; beginning = nanoTime();
     }
 
     public static double stop() {
-        fim = nanoTime();
-        long elapsedTime = fim - inicio;
-        // segundos
+        end = nanoTime();
+        long elapsedTime = end - beginning;
+        // seconds
         return elapsedTime / 1.0E09;
     }
 

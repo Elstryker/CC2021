@@ -19,12 +19,11 @@ public class GatewayWorker implements Runnable{
     @Override
     public void run()  {
         boolean keep_alive;
-        System.out.println("Debug: got new client " + clientSocket.toString());
+
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             OutputStream clientOutput = clientSocket.getOutputStream();
             do {
-                System.out.println("Reading request!");
                 try {
                     clientSocket.setSoTimeout(5000); // Will only wait 5 seconds for a new request in a persistent connection
                     HTTPRequest request = readRequest(br);
@@ -36,7 +35,7 @@ public class GatewayWorker implements Runnable{
                     keep_alive = false;
                 }
             } while(keep_alive);
-            System.out.println("Exited");
+
             clientOutput.close();
             clientSocket.close();
             br.close();

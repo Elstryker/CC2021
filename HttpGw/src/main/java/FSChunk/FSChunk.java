@@ -56,8 +56,6 @@ public class FSChunk {
         // Get MetaData Information
         FileMetaData fileMetaData = getMetaData(socket, filename, server.getFirst(), server.getSecond());
         socketPool.releaseSocket(socket);
-        // Debugging metaData information
-        System.out.println("\n" + fileMetaData.toString() + "\n\n");
         // Get file from server if file exists, else throw exception
         retrieveAndSendFileAux(clientOutputStream, filename, fileMetaData);
     }
@@ -149,12 +147,10 @@ public class FSChunk {
         int basePacketMultiplier = 10;
         ArrayList<ArrayList<Integer>> offSetsForThreads = new ArrayList<>();
         int numThreads = (int) ((size / (basePacketMultiplier * 1024 * 1024)) + 1);
-        System.out.println("Number of threads: " + numThreads);
         int packetSize = 1024 * basePacketMultiplier;
         // Checking time to download the files
         Timer.start();
         int numEqualLengthPackets = (int) (size / packetSize);
-        System.out.println(numEqualLengthPackets);
         // Boolean to determine if the file needs a last packet that has not the same size and the others
         boolean last = size % packetSize != 0;
         int lastOffset;
