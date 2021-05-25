@@ -51,7 +51,7 @@ public class ServerAssociationWorker implements Runnable{
                 .load();
         String authSecret = dotenv.get("AUTH_SECRET");
 
-        System.out.println ("Listening on port: 12345");
+        System.out.println ("Listening for auth on port: 12345");
         while(true) {
             try {
                 /// Receive the auth request

@@ -20,7 +20,7 @@ public class HttpGw {
         // Starting HTTP Server
         new Thread(()-> {
             try (ServerSocket serverSocket = new ServerSocket(8080)) {
-                System.out.println("HTTP Server setup");
+                System.out.println("HTTP Server setup: port 8080");
                 while (true) {
                     Socket client = serverSocket.accept();
                     System.out.println("New socket");
@@ -41,7 +41,7 @@ public class HttpGw {
             }
 
             if(SSLServerSocket!=null) {
-                System.out.println("HTTPS Server setup");
+                System.out.println("HTTPS Server setup: port 8081");
                 try {
                     while (true) {
                         Socket client = SSLServerSocket.accept();
